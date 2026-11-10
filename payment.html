@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Оплата — DropFlow</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="auth-page">
+    <div class="auth-wrap" style="grid-template-columns: 1fr; max-width: 600px; text-align: center;">
+        <div class="auth-card" style="padding: 60px 40px;">
+            <h2 style="margin-bottom: 20px;">Оплата заказа</h2>
+            <p style="color: var(--text-2); margin-bottom: 30px;">Сумма к оплате: <b id="payAmount" style="color: var(--accent); font-size: 20px;">0 ₽</b></p>
+            <p style="color: var(--text-3); font-size: 14px; margin-bottom: 30px;">Это заглушка. Скоро здесь будет интерфейс ЮKassa.</p>
+            <a href="index.html" class="btn-accent">Вернуться на сайт</a>
+        </div>
+    </div>
+    <script>
+        // Просто показываем сумму (её можно брать из localStorage)
+        const total = localStorage.getItem('df_last_total') || '0';
+        document.getElementById('payAmount').textContent = Number(total).toLocaleString('ru-RU') + ' ₽';
+    </script>
+</body>
+</html>

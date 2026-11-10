@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Вход — DropFlow</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="auth-page">
+
+    <a href="index.html" class="auth-back">← На главную</a>
+
+    <div class="auth-wrap">
+        <div class="auth-card">
+            <div class="auth-logo">
+                <svg viewBox="0 0 48 48" width="56" height="56">
+                    <defs><linearGradient id="lgAuth" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#e8b06a"/><stop offset="100%" stop-color="#7eb8f0"/></linearGradient></defs>
+                    <path d="M24 4 L42 14 V34 L24 44 L6 34 V14 Z" fill="none" stroke="url(#lgAuth)" stroke-width="2"/>
+                    <path d="M16 18 H26 a6 6 0 0 1 0 12 H16 Z" fill="none" stroke="url(#lgAuth)" stroke-width="2.5"/>
+                    <circle cx="34" cy="34" r="3" fill="#e8b06a"/>
+                </svg>
+                <h1>DROPFLOW</h1>
+                <p class="auth-sub">Войдите в личный кабинет</p>
+            </div>
+
+            <div class="auth-tabs">
+                <button class="auth-tab active" data-tab="login">Вход</button>
+                <button class="auth-tab" data-tab="register">Регистрация</button>
+            </div>
+
+            <div id="authMessage" class="auth-message" hidden></div>
+
+            <form id="loginForm" class="auth-form">
+                <div class="form-row"><label>Логин или Email</label><input type="text" name="login" class="input" required></div>
+                <div class="form-row"><label>Пароль</label><input type="password" name="password" class="input" required></div>
+                <button type="submit" class="btn-accent full big">Войти</button>
+            </form>
+
+            <form id="registerForm" class="auth-form" hidden>
+             <div class="form-row">
+                 <label>ФИО полностью</label>
+                 <input type="text" name="name" class="input" placeholder="Иванов Иван Иванович" required>
+            </div>
+                <div class="form-row"><label>Email</label><input type="email" name="email" class="input" required></div>
+                <div class="form-row"><label>Телефон</label><input type="tel" name="phone" class="input" required></div>
+                <div class="form-row"><label>Логин</label><input type="text" name="login" class="input" required></div>
+                <div class="form-row"><label>Пароль</label><input type="password" name="password" class="input" minlength="6" required></div>
+                <button type="submit" class="btn-accent full big">Создать аккаунт</button>
+            </form>
+        </div>
+
+        <div class="auth-side">
+            <h2>Добро пожаловать в DropFlow</h2>
+            <p>Личный кабинет даёт вам:</p>
+            <ul>
+                <li>📦 Историю заказов и их статус</li>
+                <li>♥ Список избранных товаров</li>
+                <li>📱 SMS-уведомления о доставке</li>
+            </ul>
+        </div>
+    </div>
+
+    <script src="js/data.js"></script>
+    <script src="js/auth.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const tabs = document.querySelectorAll('.auth-tab');
+            const loginForm = document.getElementById('loginForm');
+            const registerForm = document.getElementById('registerForm');
+            const messageEl = document.getElementById('authMessage');
+
+            // Переключение вкладок
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    tabs.forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    if (tab.dataset.tab === 'login') {
+                        loginForm.hidden = false;
+                        registerForm.hidden = true;
+                    } else {
+                        loginForm.hidden = true;
+                        registerForm.hidden = false;
+                    }
+                    messageEl.hidden = true;
+                });
+            });
+
+            // Вход
+            loginForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const fd = new FormData(loginForm);
+                const res = Auth.login(fd.get('login'), fd.get('password'));
+                if (!res.ok) {
+                    messageEl.hidden = false;
+                    messageEl.className = 'auth-message error';
+                    messageEl.textContent = res.error;
+                    return;
+                }
+                messageEl.hidden = false;
+                messageEl.className = 'auth-message success';
+                messageEl.textContent = 'Успешный вход! Перенаправляем...';
+                setTimeout(() => {
+                    window.location.href = res.user.role === 'admin' ? 'admin.html' : 'index.html';
+                }, 500);
+            });
+
+            // Регистрация
+            registerForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const fd = new FormData(registerForm);
+                const res = Auth.register({
+                    name: fd.get('name'),
+                    email: fd.get('email'),
+                    phone: fd.get('phone'),
+                    login: fd.get('login'),
+                    password: fd.get('password')
+                });
+                if (!res.ok) {
+                    messageEl.hidden = false;
+                    messageEl.className = 'auth-message error';
+                    messageEl.textContent = res.error;
+                    return;
+                }
+                messageEl.hidden = false;
+                messageEl.className = 'auth-message success';
+                messageEl.textContent = 'Аккаунт создан! Перенаправляем...';
+                setTimeout(() => window.location.href = 'index.html', 500);
+            });
+        });
+    </script>
+</body>
+</html>
