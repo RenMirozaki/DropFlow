@@ -55,63 +55,89 @@
     flex-grow: 1;
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 8px;
 }
 .admin-nav-item {
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 11px 14px;
-    background: transparent;
-    border: none;
-    border-radius: var(--r-sm);
-    color: var(--text-2);
+    padding: 12px 14px;
+    background: #fff; /* П. 4 (и 3): Белый фон */
+    border: 2px solid var(--border); /* П. 3: Окантовка */
+    border-radius: 4px; /* П. 3: Меньше округления */
+    color: #0b1712; /* Темный текст для белого фона */
     font-family: inherit;
     font-size: 13.5px;
-    font-weight: 500;
+    font-weight: 600;
     cursor: pointer;
     transition: var(--t);
     text-align: left;
     width: 100%;
     position: relative;
+    box-shadow: 0 4px 0 rgba(0,0,0,0.4), 0 8px 15px rgba(0,0,0,0.3); /* П. 3: Тень */
+    text-transform: uppercase;
 }
 .admin-nav-item:hover {
-    background: var(--bg-3);
-    color: var(--text);
+    background: #f0f0f0;
+    border-color: var(--accent);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 0 rgba(0,0,0,0.4), 0 10px 20px rgba(0,0,0,0.3);
+}
+.admin-nav-item:active {
+    transform: translateY(2px);
+    box-shadow: 0 2px 0 rgba(0,0,0,0.4), 0 4px 8px rgba(0,0,0,0.3);
 }
 .admin-nav-item.active {
-    background: var(--accent-soft);
-    color: var(--accent);
-    border-left: 3px solid var(--accent);
-    padding-left: 11px;
+    background: var(--accent);
+    color: #0b1712;
+    border-color: var(--accent);
 }
-.nav-ico { font-size: 16px; width: 20px; text-align: center; }
+.nav-ico { 
+    font-size: 18px; 
+    width: 20px; 
+    text-align: center; 
+    /* П. 3: Убираем смайлики в админке (оставляем только текст, если нужно) */
+    display: none; /* Скрываем иконки, так как просили убрать смайлики */
+}
 
 .admin-sidebar-footer {
     padding: 16px 12px;
     border-top: 1px solid var(--border);
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 8px;
 }
 .admin-link {
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 10px;
-    padding: 10px 14px;
-    background: transparent;
-    border: none;
-    border-radius: var(--r-sm);
-    color: var(--text-2);
+    padding: 12px 14px;
+    background: #fff; /* П. 4: Белый фон */
+    border: 2px solid var(--border); /* П. 3: Окантовка */
+    border-radius: 4px; /* П. 3: Меньше округления */
+    color: #0b1712;
     font-family: inherit;
     font-size: 13px;
+    font-weight: 600;
     cursor: pointer;
     transition: var(--t);
-    text-align: left;
+    text-align: center;
     width: 100%;
+    box-shadow: 0 4px 0 rgba(0,0,0,0.4), 0 8px 15px rgba(0,0,0,0.3); /* П. 3: Тень */
+    text-transform: uppercase;
 }
-.admin-link:hover { background: var(--bg-3); color: var(--text); }
-.admin-link.danger:hover { color: var(--danger); background: rgba(239,107,107,0.08); }
+.admin-link:hover { 
+    background: #f0f0f0; 
+    border-color: var(--accent);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 0 rgba(0,0,0,0.4), 0 10px 20px rgba(0,0,0,0.3);
+}
+.admin-link:active {
+    transform: translateY(2px);
+    box-shadow: 0 2px 0 rgba(0,0,0,0.4), 0 4px 8px rgba(0,0,0,0.3);
+}
+.admin-link.danger:hover { color: var(--danger); border-color: var(--danger); background: #fff; }
 
 /* ===== Main ===== */
 .admin-main {
@@ -126,7 +152,7 @@
     gap: 20px;
     padding: 22px 32px;
     border-bottom: 1px solid var(--border);
-    background: rgba(32, 36, 44, 0.7);
+    background: rgba(18, 33, 27, 0.7);
     backdrop-filter: blur(12px);
     position: sticky;
     top: 0;
@@ -201,7 +227,7 @@
     border: 1px dashed var(--border);
 }
 
-/* ===== Admin list (универсальный) ===== */
+/* ===== Admin list ===== */
 .admin-list {
     display: flex;
     flex-direction: column;
@@ -280,7 +306,7 @@
     border-radius: var(--r-md);
 }
 
-/* ===== Tags / статусы ===== */
+/* ===== Tags ===== */
 .tag {
     display: inline-block;
     font-size: 11px;
@@ -326,13 +352,6 @@
     color: var(--bg);
 }
 
-/* ===== Page editor ===== */
-.editor-actions {
-    display: flex;
-    gap: 10px;
-    margin-top: 16px;
-}
-
 /* ===== Settings ===== */
 .settings-grid {
     display: grid;
@@ -345,103 +364,15 @@
     margin-bottom: 20px;
 }
 .settings-grid .form-row { margin-bottom: 0; }
+.editor-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 16px;
+}
 
-/* ===== Modal в админке ===== */
+/* ===== Modal ===== */
 .admin-page .modal-content {
     max-width: 720px;
-}
-
-/* ===== Адаптив ===== */
-@media (max-width: 1024px) {
-    .admin-page #adminApp { grid-template-columns: 80px 1fr; }
-    .admin-logo b, .admin-logo i { display: none; }
-    .admin-logo { justify-content: center; padding: 20px 10px; }
-    .admin-nav-item {
-        justify-content: center;
-        padding: 12px 8px;
-        font-size: 0;
-        gap: 0;
-    }
-    .admin-nav-item.active { padding-left: 5px; }
-    .nav-ico { font-size: 20px; }
-    .admin-link { justify-content: center; font-size: 0; padding: 12px 8px; }
-    .admin-link::before {
-        content: attr(data-short);
-        font-size: 18px;
-    }
-}
-
-@media (max-width: 768px) {
-    .admin-page #adminApp {
-        grid-template-columns: 1fr;
-    }
-    
-    .admin-sidebar {
-        position: static;
-        height: auto;
-        border-right: none;
-        border-bottom: 1px solid var(--border);
-        padding-bottom: 10px;
-    }
-
-    .admin-nav {
-        flex-direction: row;
-        overflow-x: auto;
-        padding: 10px;
-        gap: 8px;
-        -webkit-overflow-scrolling: touch;
-    }
-
-    .admin-nav-item {
-        flex-direction: column;
-        padding: 10px;
-        font-size: 11px;
-        min-width: 70px;
-        text-align: center;
-        border-left: none !important;
-        border-bottom: 2px solid transparent;
-    }
-
-    .admin-nav-item.active {
-        border-bottom-color: var(--accent);
-        padding-left: 10px;
-    }
-
-    .nav-ico {
-        margin-bottom: 4px;
-        font-size: 18px;
-    }
-
-    .admin-topbar {
-        padding: 15px 20px;
-    }
-
-    .editor-layout {
-        grid-template-columns: 1fr !important;
-    }
-
-    .settings-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .list-actions {
-        flex-direction: row;
-        flex-wrap: wrap;
-        width: 100%;
-        margin-top: 10px;
-        align-items: center;
-    }
-
-    .status-select {
-        flex: 1;
-        min-width: 120px !important;
-    }
-
-    .list-actions .btn-ghost[data-view-order] {
-        flex: 0 0 auto;
-        padding: 10px 15px;
-        white-space: nowrap;
-    }
 }
 
 /* Убираем стрелки у полей ввода цен */
@@ -461,7 +392,7 @@
     top: 10px;
     right: 10px;
     z-index: 10;
-    background: rgba(26, 29, 35, 0.85);
+    background: rgba(11, 23, 18, 0.85);
     padding: 6px 10px;
     border-radius: var(--r-sm);
     display: flex;
@@ -514,12 +445,128 @@
     background: var(--bg-3) !important;
     filter: brightness(1.2);
 }
-
 .order-item-header.active .chevron-icon {
     transform: rotate(180deg);
 }
-
 .order-item-details.open {
     max-height: 250px !important;
     padding: 0 15px !important;
+}
+
+/* ===== АДАПТИВ (П. 2) ===== */
+@media (max-width: 1024px) {
+    .admin-page #adminApp { grid-template-columns: 80px 1fr; }
+    .admin-logo b, .admin-logo i { display: none; }
+    .admin-logo { justify-content: center; padding: 20px 10px; }
+    .admin-nav-item {
+        justify-content: center;
+        padding: 12px 8px;
+        font-size: 0;
+        gap: 0;
+    }
+    .admin-nav-item.active { padding-left: 5px; }
+    .admin-link { justify-content: center; font-size: 0; padding: 12px 8px; }
+    .admin-link::before {
+        content: attr(data-short);
+        font-size: 18px;
+    }
+}
+
+@media (max-width: 768px) {
+    .admin-page #adminApp {
+        grid-template-columns: 1fr;
+    }
+    
+    .admin-sidebar {
+        position: static;
+        height: auto;
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+        padding-bottom: 10px;
+    }
+
+    .admin-logo {
+        display: none;
+    }
+
+    /* П. 2: Меню в 3 столбика, квадратные кнопки */
+    .admin-nav {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr); /* 3 столбца */
+        gap: 10px;
+        padding: 15px;
+        overflow-x: visible;
+    }
+
+    .admin-nav-item {
+        flex-direction: column;
+        padding: 15px 5px;
+        font-size: 11px;
+        text-align: center;
+        border-left: none !important;
+        border-bottom: none !important;
+        aspect-ratio: 1 / 1; /* Квадратная форма */
+        justify-content: center;
+        gap: 5px;
+    }
+
+    .nav-ico {
+        margin-bottom: 0;
+        font-size: 20px;
+    }
+
+    .admin-topbar {
+        padding: 15px 20px;
+    }
+
+    /* П. 1: Кнопки внизу */
+    .admin-sidebar-footer {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        padding: 10px 15px;
+        gap: 10px;
+        justify-content: center;
+        border-top: none;
+    }
+    .admin-link {
+        justify-content: center;
+        font-size: 12px;
+        padding: 12px;
+        background: #fff;
+        border: 2px solid var(--border);
+        border-radius: 4px;
+        width: 100%;
+        text-transform: uppercase;
+    }
+    .admin-link::before { content: none; }
+
+    .settings-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-preview-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 10px !important;
+    }
+    .admin-preview-grid .product-info {
+        padding: 10px;
+    }
+    .admin-preview-grid .product-name {
+        font-size: 13px;
+    }
+    .admin-preview-grid .product-price {
+        font-size: 14px;
+    }
+
+    .list-actions {
+        flex-direction: column;
+        width: 100%;
+        margin-top: 10px;
+    }
+    .status-select {
+        width: 100% !important;
+    }
+    .editor-layout {
+        grid-template-columns: 1fr !important;
+    }
 }

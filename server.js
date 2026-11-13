@@ -4,7 +4,7 @@ const db = require('./database');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const { body, validationResult } = require('express-validator');
-
+const axios = require('axios'); // Используем axios для Telegram
 require('dotenv').config();
 
 const app = express();
@@ -34,7 +34,7 @@ const orderLimiter = rateLimit({
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '/')));
 
-// === API: Создать заказ (с валидацией и защитой) ===
+// === API: Создать заказ (с валидацией) ===
 app.post('/api/order', orderLimiter, [
     body('name').trim().isLength({ min: 3 }).withMessage('Укажите ФИО').matches(/^[а-яА-ЯёЁa-zA-Z\s]+$/).withMessage('ФИО должно содержать только буквы'),
     body('phone').trim().isLength({ min: 10 }).withMessage('Укажите телефон'),
@@ -47,8 +47,10 @@ app.post('/api/order', orderLimiter, [
     }
 
     try {
+        // Данные уже очищены и проверены валидатором, SQL-инъекции исключены
         const { name, phone, email, address, comment, items, total } = req.body;
 
+        // Сохраняем в базу (параметризованный запрос)
         const result = await db.query(
             `INSERT INTO orders (name, phone, email, address, comment, items, total, status) 
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
@@ -58,7 +60,7 @@ app.post('/api/order', orderLimiter, [
         const orderId = result.rows[0].id;
         console.log(`🛒 Новый заказ №${orderId} от ${name} на сумму ${total} ₽`);
 
-                // === УВЕДОМЛЕНИЕ В TELEGRAM ДЛЯ АДМИНА ===
+        // === УВЕДОМЛЕНИЕ В TELEGRAM ДЛЯ АДМИНА ===
         const tgToken = process.env.TELEGRAM_BOT_TOKEN;
         const tgChatId = process.env.TELEGRAM_CHAT_ID;
 
@@ -72,44 +74,19 @@ app.post('/api/order', orderLimiter, [
 
                 const tgUrl = `https://api.telegram.org/bot${tgToken}/sendMessage`;
                 
-                // Используем встроенный модуль 'https', который есть в Node.js по умолчанию
-                const https = require('https');
-                
-                const data = JSON.stringify({
+                await axios.post(tgUrl, {
                     chat_id: tgChatId,
                     text: message,
                     parse_mode: 'Markdown'
                 });
-
-                const options = {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Content-Length': data.length
-                    }
-                };
-
-                const tgReq = https.request(tgUrl, options, (tgRes) => {
-                    let body = '';
-                    tgRes.on('data', (chunk) => body += chunk);
-                    tgRes.on('end', () => {
-                        if (tgRes.statusCode === 200) {
-                            console.log('📨 Уведомление в Telegram отправлено.');
-                        } else {
-                            console.error('❌ Ошибка Telegram API:', body);
-                        }
-                    });
-                });
-
-                tgReq.on('error', (e) => {
-                    console.error('❌ Ошибка сети при отправке в Telegram:', e.message);
-                });
-
-                tgReq.write(data);
-                tgReq.end();
-
+                
+                console.log('📨 Уведомление в Telegram отправлено.');
             } catch (tgErr) {
-                console.error('❌ Ошибка при отправке в Telegram:', tgErr.message);
+                if (tgErr.response) {
+                    console.error('❌ Ошибка Telegram API:', tgErr.response.data.description);
+                } else {
+                    console.error('❌ Ошибка сети при отправке в Telegram:', tgErr.message);
+                }
             }
         } else {
             console.log('⚠️ Уведомление в Telegram не отправлено: не указан токен или chat_id в .env');

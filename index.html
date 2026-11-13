@@ -43,13 +43,12 @@
         <div class="hero-content">
             <h1>Вещи, которые<br>делают жизнь <span id="typewriter" class="typewriter">уютнее</span></h1>
             <p>Отобранные вручную предметы интерьера, электроника и аксессуары от проверенных поставщиков.</p>
-            <div class="hero-buttons"><a href="#catalog" class="btn-accent big">Смотреть каталог</a></div>
         </div>
     </section>
 
     <section class="catalog" id="catalog">
         <div class="container">
-            <div class="section-head"><div><span class="section-label">ВСЕ ТОВАРЫ</span><h2 class="section-title">Каталог</h2></div></div>
+            <div class="section-head"><div><h2 class="section-title" style="font-size: 4rem; margin-bottom: 20px;">Каталог</h2></div></div>
             <div class="filters">
                 <input type="text" id="searchInput" class="input" placeholder="🔍 Поиск по названию...">
                 <select id="categoryFilter" class="input select"><option value="all">Все товары</option></select>
@@ -61,9 +60,12 @@
 
     <!-- Модалка для страниц (О нас, FAQ, Контакты) -->
     <div id="pageModal" class="modal">
-        <div class="modal-content">
-            <button id="closePage" class="close-btn">&times;</button>
-            <div id="pageBody"></div>
+        <div class="modal-decor-wrapper">
+            <!-- Объекты удалены -->
+            <div class="modal-content">
+                <button id="closePage" class="close-btn">&times;</button>
+                <div id="pageBody"></div>
+            </div>
         </div>
     </div>
 
@@ -108,8 +110,7 @@
                         <span>Я согласен с <a href="#" data-page="offer">условиями оферты</a> и <a href="#" data-page="privacy">политикой конфиденциальности</a>, а также с получением электронного чека в соответствии с НПД.</span>
                     </label>
                 </div>
-                <button type="submit" class="btn-accent full big" style="margin-top: 10px;">Подтвердить заказ</button>
-                <button type="button" id="payBtn" class="btn-ghost full big" style="margin-top: 10px;">💳 Оплатить онлайн</button>
+                <button type="button" id="payBtn" class="btn-accent full big" style="margin-top: 10px;">💳 Оплатить онлайн</button>
             </form>
         </div>
     </div>

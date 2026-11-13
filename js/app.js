@@ -62,7 +62,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function init() {
         allProducts = Store.getProducts();
-        applySettings();
         renderCategories();
         renderProducts();
         updateCartUI();
@@ -72,15 +71,7 @@ document.addEventListener('DOMContentLoaded', () => {
         initProfileTabs();
     }
 
-    // ====== НАСТРОЙКИ ======
-    function applySettings() {
-        const s = Store.getSettings();
-        const set = (sel, txt) => { const el = document.querySelector(sel); if (el) el.textContent = txt; };
-        set('.logo-text b', s.siteName.toUpperCase());
-        set('.logo-text i', s.tagline);
-        document.title = s.siteName + ' — магазин качественных товаров';
-    }
-
+    // ====== СТРАНИЦЫ ======
     function startTypewriter() {
         const typeTarget = document.getElementById('typewriter');
         if (!typeTarget) return;
@@ -148,7 +139,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return `
             <div class="product-card" data-id="${p.id}">
                 <div class="product-media">
-                    <img src="${DFUtil.escapeHtml(p.image)}" alt="${DFUtil.escapeHtml(p.name)}" onerror="this.onerror=null;this.src='https://via.placeholder.com/400x400/232730/e8b06a?text=DropFlow';">
+                    <img src="${DFUtil.escapeHtml(p.image)}" alt="${DFUtil.escapeHtml(p.name)}" onerror="this.onerror=null;this.src='https://via.placeholder.com/400x400/1a2f26/e8b06a?text=DropFlow';">
                     <div class="product-badges">
                         ${hasOld ? `<span class="p-badge sale">-${discount}%</span>` : ''}
                         ${p.isNew ? `<span class="p-badge new">New</span>` : ''}
@@ -166,7 +157,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                     <div class="product-actions">
                         <button class="btn-accent" data-add="${p.id}">В корзину</button>
-                        <button class="btn-ghost btn-icon" data-quick2="${p.id}" title="Подробнее">👁</button>
                     </div>
                 </div>
             </div>
@@ -174,9 +164,25 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function bindCardEvents() {
-        grid.querySelectorAll('[data-add]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); addToCart(Number(b.dataset.add)); }));
+        grid.querySelectorAll('[data-add]').forEach(b => b.addEventListener('click', e => { 
+            e.stopPropagation(); 
+            
+            const btn = e.currentTarget;
+            if (btn.classList.contains('loading')) return;
+            
+            btn.classList.add('loading');
+            const originalText = btn.textContent;
+            btn.textContent = 'Добавлено';
+            
+            setTimeout(() => {
+                btn.classList.remove('loading');
+                btn.textContent = originalText;
+            }, 1500);
+
+            addToCart(Number(b.dataset.add)); 
+        }));
         grid.querySelectorAll('[data-fav]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); toggleFav(Number(b.dataset.fav)); }));
-        grid.querySelectorAll('[data-quick], [data-quick2]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); openQuickView(Number(b.dataset.quick || b.dataset.quick2)); }));
+        grid.querySelectorAll('[data-quick]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); openQuickView(Number(b.dataset.quick)); }));
     }
 
     if (searchInput) searchInput.addEventListener('input', renderProducts);
@@ -192,7 +198,7 @@ document.addEventListener('DOMContentLoaded', () => {
         else cart.push({ id: p.id, name: p.name, price: p.price, image: p.image, quantity: 1 });
         Store.setCart(cart);
         updateCartUI();
-        openCart();
+        
         DFUtil.toast(`«${p.name}» добавлен в корзину`, 'success', 2000);
     }
 
@@ -207,7 +213,7 @@ document.addEventListener('DOMContentLoaded', () => {
         else {
             cartItems.innerHTML = cart.map(i => `
                 <div class="cart-item">
-                    <img src="${DFUtil.escapeHtml(i.image)}" alt="${DFUtil.escapeHtml(i.name)}" onerror="this.onerror=null;this.src='https://via.placeholder.com/72x72/232730/e8b06a?text=X';">
+                    <img src="${DFUtil.escapeHtml(i.image)}" alt="${DFUtil.escapeHtml(i.name)}" onerror="this.onerror=null;this.src='https://via.placeholder.com/72x72/1a2f26/e8b06a?text=X';">
                     <div class="cart-item-info">
                         <h4>${DFUtil.escapeHtml(i.name)}</h4>
                         <p>${DFUtil.formatPrice(i.price)}</p>
@@ -278,7 +284,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if(favItems) {
             favItems.innerHTML = list.map(p => `
                 <div class="cart-item">
-                    <img src="${DFUtil.escapeHtml(p.image)}" alt="${DFUtil.escapeHtml(p.name)}" onerror="this.onerror=null;this.src='https://via.placeholder.com/72x72/232730/e8b06a?text=X';">
+                    <img src="${DFUtil.escapeHtml(p.image)}" alt="${DFUtil.escapeHtml(p.name)}" onerror="this.onerror=null;this.src='https://via.placeholder.com/72x72/1a2f26/e8b06a?text=X';">
                     <div class="cart-item-info"><h4>${DFUtil.escapeHtml(p.name)}</h4><p>${DFUtil.formatPrice(p.price)}</p></div>
                     <div class="cart-item-actions">
                         <button class="btn-accent" data-fav-add="${p.id}">В корзину</button>
@@ -308,7 +314,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         quickViewBody.innerHTML = `
             <div class="qv-grid">
-                <div class="qv-image"><img src="${DFUtil.escapeHtml(p.image)}" alt="${DFUtil.escapeHtml(p.name)}" onerror="this.onerror=null;this.src='https://via.placeholder.com/600x600/232730/e8b06a?text=DropFlow';"></div>
+                <div class="qv-image"><img src="${DFUtil.escapeHtml(p.image)}" alt="${DFUtil.escapeHtml(p.name)}" onerror="this.onerror=null;this.src='https://via.placeholder.com/600x600/1a2f26/e8b06a?text=DropFlow';"></div>
                 <div class="qv-info">
                     <span class="product-category">${DFUtil.escapeHtml(p.category)}</span>
                     <h2>${DFUtil.escapeHtml(p.name)}</h2>
@@ -342,53 +348,21 @@ document.addEventListener('DOMContentLoaded', () => {
     if (closeCheckout) closeCheckout.addEventListener('click', () => checkoutModal.classList.remove('open'));
     if (checkoutModal) checkoutModal.addEventListener('click', e => { if (e.target === checkoutModal) checkoutModal.classList.remove('open'); });
 
-    if (checkoutForm) {
-        checkoutForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const fd = new FormData(checkoutForm);
-            const nameValue = fd.get('name').trim();
-            if (nameValue.split(/\s+/).length < 3) {
-                alert('Пожалуйста, укажите ФИО (например: Иванов Иван Иванович).');
+    const payBtn = document.getElementById('payBtn');
+    if (payBtn) {
+        payBtn.addEventListener('click', () => {
+            if (!checkoutForm.checkValidity()) {
+                checkoutForm.reportValidity();
                 return;
             }
+            
             const sub = cart.reduce((s, i) => s + i.price * i.quantity, 0);
             let discount = 0;
             if (appliedPromo) discount = appliedPromo.type === 'percent' ? Math.round(sub * appliedPromo.value / 100) : Math.min(appliedPromo.value, sub);
             const total = Math.max(0, sub - discount);
 
-            const orderData = {
-                name: fd.get('name'),
-                phone: fd.get('phone'),
-                email: fd.get('email'),
-                address: fd.get('address'),
-                comment: fd.get('comment'),
-                items: cart,
-                total: total
-            };
-
-            try {
-                const response = await fetch('/api/order', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(orderData)
-                });
-
-                const result = await response.json();
-
-                if (result.success) {
-                    cart = [];
-                    appliedPromo = null;
-                    Store.setCart(cart);
-                    updateCartUI();
-                    checkoutModal.classList.remove('open');
-                    alert(`Заказ успешно оформлен!\n\nСумма: ${DFUtil.formatPrice(total)}\n\nНаш менеджер свяжется с вами.`);
-                } else {
-                    alert('Ошибка при оформлении заказа. Попробуйте позже.');
-                }
-            } catch (error) {
-                console.error('Ошибка отправки:', error);
-                alert('Не удалось связаться с сервером. Проверьте интернет.');
-            }
+            localStorage.setItem('df_last_total', total);
+            window.location.href = 'payment.html';
         });
     }
 
@@ -404,7 +378,7 @@ document.addEventListener('DOMContentLoaded', () => {
             let html = '';
             const pages = Store.getPages();
             const settings = Store.getSettings();
-            
+
             if (key === 'contacts') {
                 html = `<h2>Контакты</h2>
                         <p><b>Email:</b> ${settings.email}</p>
@@ -415,12 +389,14 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (key === 'faq') {
                 html = `<h2>Часто спрашивают</h2>
                         <div class="faq-list">
-                            <div class="faq-item"><button class="faq-q">Как оформить заказ?</button><div class="faq-a">Добавьте товары в корзину, нажмите «Оформить заказ», заполните форму и подтвердите. Мы свяжемся с вами в течение 15 минут.</div></div>
-                            <div class="faq-item"><button class="faq-q">Сколько стоит доставка?</button><div class="faq-a">Доставка по России осуществляется через СДЭК — от 350 ₽. Точную стоимость рассчитаем при подтверждении заказа.</div></div>
-                            <div class="faq-item"><button class="faq-q">Можно ли оплатить при получении?</button><div class="faq-a">Оплата происходит онлайн через сервис ЮKassa. Это позволяет нам моментально зарезервировать товар на складе поставщика.</div></div>
-                            <div class="faq-item"><button class="faq-q">Как вернуть товар?</button><div class="faq-a">Мы полностью берем на себя расходы по возврату товара, если он вам не подошел (при сохранении упаковки и товарного вида в течение 14 дней).</div></div>
-                            <div class="faq-item"><button class="faq-q">Придут ли SMS о заказе?</button><div class="faq-a">Да, при оформлении мы отправляем SMS на указанный телефон: подтверждение, статус доставки и номер трека.</div></div>
+                            <div class="faq-item"><button class="faq-q">Как оформить заказ?</button><div class="faq-a">Добавьте товары в корзину, нажмите «Оформить заказ», заполните форму и подтвердите.</div></div>
+                            <div class="faq-item"><button class="faq-q">Сколько стоит доставка?</button><div class="faq-a">Доставка по России осуществляется через СДЭК — от 350 ₽.</div></div>
+                            <div class="faq-item"><button class="faq-q">Можно ли оплатить при получении?</button><div class="faq-a">Оплата происходит онлайн через ЮKassa.</div></div>
+                            <div class="faq-item"><button class="faq-q">Как вернуть товар?</button><div class="faq-a">Возврат возможен в течение 14 дней.</div></div>
+                            <div class="faq-item"><button class="faq-q">Придут ли SMS о заказе?</button><div class="faq-a">Мы отправляем уведомления о статусе заказа в наш Telegram-бот. Подпишитесь на <a href="https://t.me/DropFlowBot" target="_blank" style="color:var(--accent); text-decoration:underline;">@DropFlowBot</a>, чтобы получать статусы заказов.</div></div>
                         </div>`;
+            } else if (key === 'about') {
+                html = pages['about'] || '<p>Информация отсутствует</p>';
             } else {
                 html = pages[key] || '<p>Страница не найдена</p>';
             }
@@ -516,7 +492,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <h4 style="margin: 0;">Заказ №${order.id}</h4>
                                 <span class="tag active">${status}</span>
                             </div>
-                            <p style="margin: 0; font-size: 13px; color: var(--text-2);">Дата: ${DFUtil.formatDate(order.createdAt)}</p>
+                            <p style="margin: 0; font-size: 13px; color: var(--text-2);">Дата: ${DFUtil.formatDate(order.createdAt || order.created_at)}</p>
                             <p style="margin: 0; font-size: 13px; color: var(--text-2);">Сумма: ${DFUtil.formatPrice(order.total)}</p>
                         </div>
                     `;
@@ -533,7 +509,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const favList = allProducts.filter(p => fav.includes(p.id));
             favContainer.innerHTML = favList.map(p => `
                 <div class="cart-item" style="align-items: center; padding: 10px 0;">
-                    <img src="${DFUtil.escapeHtml(p.image)}" alt="${DFUtil.escapeHtml(p.name)}" onerror="this.onerror=null;this.src='https://via.placeholder.com/72x72/232730/e8b06a?text=X';">
+                    <img src="${DFUtil.escapeHtml(p.image)}" alt="${DFUtil.escapeHtml(p.name)}" onerror="this.onerror=null;this.src='https://via.placeholder.com/72x72/1a2f26/e8b06a?text=X';">
                     <div class="cart-item-info"><h4>${DFUtil.escapeHtml(p.name)}</h4><p>${DFUtil.formatPrice(p.price)}</p></div>
                     <button class="btn-accent" data-prof-fav-add="${p.id}">В корзину</button>
                 </div>
@@ -553,23 +529,11 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             cartContainer.innerHTML = cart.map(i => `
                 <div class="cart-item" style="align-items: center; padding: 10px 0;">
-                    <img src="${DFUtil.escapeHtml(i.image)}" alt="${DFUtil.escapeHtml(i.name)}" onerror="this.onerror=null;this.src='https://via.placeholder.com/72x72/232730/e8b06a?text=X';">
+                    <img src="${DFUtil.escapeHtml(i.image)}" alt="${DFUtil.escapeHtml(i.name)}" onerror="this.onerror=null;this.src='https://via.placeholder.com/72x72/1a2f26/e8b06a?text=X';">
                     <div class="cart-item-info"><h4>${DFUtil.escapeHtml(i.name)}</h4><p>${i.quantity} × ${DFUtil.formatPrice(i.price)}</p></div>
                 </div>
             `).join('');
         }
-    }
-
-    // ====== ЗАГЛУШКА ЮKASSA ======
-    const payBtn = document.getElementById('payBtn');
-    if (payBtn) {
-        payBtn.addEventListener('click', () => {
-            if (!checkoutForm.checkValidity()) {
-                checkoutForm.reportValidity();
-                return;
-            }
-            alert('Оплата временно недоступна. Скоро мы подключим ЮKassa!\n\nВы можете оформить заказ и оплатить его при получении.');
-        });
     }
 
     // ====== ESCAPE ДЛЯ МОДАЛОК ======

@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
-    // Если это админ, показываем панель
+    // Показываем панель
     document.getElementById('adminApp').hidden = false;
     document.getElementById('adminApp').style.display = 'grid';
     
@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     function initAdmin() {
         let products = Store.getProducts();
-        let orders = []; // Заказы загружаем с сервера
+        let orders = [];
         let promos = Store.getPromos();
         let users = Store.getUsers();
         let pages = Store.getPages();
@@ -78,7 +78,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        // --- ЗАГРУЗКА КАРТИНОК (ТОВАРЫ) ---
+        // --- ЗАГРУЗКА КАРТИНОК ---
         if (imageFileInput) {
             imageFileInput.addEventListener('change', (e) => {
                 const file = e.target.files[0];
@@ -154,7 +154,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <label class="toggle-label" for="toggle-${p.id}">Скрыт</label>
                         </div>
                         <div class="product-media" data-edit-product="${p.id}" style="cursor:pointer;">
-                            <img src="${DFUtil.escapeHtml(p.image)}" alt="${DFUtil.escapeHtml(p.name)}" onerror="this.onerror=null;this.src='https://via.placeholder.com/400x400/232730/e8b06a?text=DropFlow';">
+                            <img src="${DFUtil.escapeHtml(p.image)}" alt="${DFUtil.escapeHtml(p.name)}" onerror="this.onerror=null;this.src='https://via.placeholder.com/400x400/1a2f26/e8b06a?text=DropFlow';">
                             <div class="product-badges">
                                 ${hasOld ? `<span class="p-badge sale">SALE</span>` : ''}
                                 ${p.popular ? `<span class="p-badge" style="background:var(--accent-2);">TOP</span>` : ''}
@@ -320,7 +320,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const itemsHtml = o.items.map((item, index) => {
                 const fullProduct = products.find(p => p.id === item.id) || {};
-                const img = fullProduct.image || item.image || 'https://via.placeholder.com/100x100/232730/e8b06a?text=No+Image';
+                const img = fullProduct.image || item.image || 'https://via.placeholder.com/100x100/1a2f26/e8b06a?text=No+Image';
                 const desc = fullProduct.description || 'Описание отсутствует';
                 
                 return `
@@ -508,10 +508,6 @@ document.addEventListener('DOMContentLoaded', () => {
             setVal('setPhone', settings.phone);
             setVal('setAddress', settings.address);
             setVal('setVk', settings.tg);
-
-            // ЮKassa
-            setVal('setYooShopId', settings.yooShopId);
-            setVal('setYooSecretKey', settings.yooSecretKey);
         }
         
         const saveSettingsBtn = document.getElementById('saveSettingsBtn');
@@ -527,10 +523,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 settings.phone = document.getElementById('setPhone').value.trim();
                 settings.address = document.getElementById('setAddress').value.trim();
                 settings.tg = document.getElementById('setVk').value.trim();
-
-                // ЮKassa
-                settings.yooShopId = document.getElementById('setYooShopId').value.trim();
-                settings.yooSecretKey = document.getElementById('setYooSecretKey').value.trim();
                 
                 Store.setSettings(settings); 
                 DFUtil.toast('Настройки сохранены', 'success');
@@ -543,7 +535,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const response = await fetch('/api/orders');
                 if (response.ok) {
                     const data = await response.json();
-                    // Преобразуем данные из БД в формат, понятный админке
                     orders = data; 
                     renderOrders();
                 }
@@ -552,7 +543,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         
-        // Очищаем старые заказы из localStorage, если они там есть, чтобы не мешали
         localStorage.removeItem('df_orders');
 
         fetchOrdersFromServer(); 
