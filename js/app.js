@@ -1,7 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
     if (!document.querySelector('.hero')) return;
 
-    // Элементы
     const grid = document.getElementById('productsGrid');
     const searchInput = document.getElementById('searchInput');
     const categoryFilter = document.getElementById('categoryFilter');
@@ -51,13 +50,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function init() {
         await loadProducts();
-        renderCategories();
+        await renderCategories();
         renderProducts();
         updateCartUI();
         updateFavUI();
         updateAuthUI();
         startTypewriter();
         initProfileTabs();
+        renderBanner();
     }
 
     async function loadProducts() {
@@ -70,24 +70,26 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // === БАННЕР (п. 2) ===
     function renderBanner() {
         const banner = document.getElementById('catalogBanner');
         if (!banner) return;
         banner.innerHTML = `
-            <div style="background: linear-gradient(135deg, var(--bg-2), var(--bg-3)); padding: 20px; text-align: center; border-radius: var(--r-md); margin-bottom: 30px; border: 1px solid var(--accent);">
-                <h3 style="color: var(--accent); margin-bottom: 10px;">🔥 Акция!</h3>
-                <p style="color: var(--text);">Скидка 10% на первый заказ по промокоду <b>WELCOME10</b></p>
+            <div style="background: linear-gradient(135deg, var(--bg-2), var(--bg-3)); padding: 25px; text-align: center; border: 1px solid var(--accent); margin-bottom: 30px;">
+                <h3 style="color: var(--accent); margin-bottom: 10px; font-size: 24px;">🔥 Акция!</h3>
+                <p style="color: var(--text); font-size: 16px;">Скидка 10% на первый заказ по промокоду <b>WELCOME10</b></p>
             </div>
         `;
     }
 
-    // === КАТЕГОРИИ (п. 6, п. 12) ===
     async function renderCategories() {
         if (!categoryFilter) return;
-        const res = await fetch('/api/categories');
-        const cats = await res.json();
-        categoryFilter.innerHTML = '<option value="all">Все товары</option>' + cats.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
+        try {
+            const res = await fetch('/api/categories');
+            const cats = await res.json();
+            categoryFilter.innerHTML = '<option value="all">Все товары</option>' + cats.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
+        } catch (e) {
+            categoryFilter.innerHTML = '<option value="all">Все товары</option>';
+        }
     }
 
     function renderProducts() {
@@ -156,7 +158,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (categoryFilter) categoryFilter.addEventListener('change', renderProducts);
     if (resetFilters) resetFilters.addEventListener('click', () => { searchInput.value = ''; categoryFilter.value = 'all'; renderProducts(); });
 
-    // === КОРЗИНА ===
     function addToCart(id) {
         const p = allProducts.find(x => x.id === id);
         if (!p) return;
@@ -226,7 +227,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // === ИЗБРАННОЕ ===
     function toggleFav(id) {
         const idx = fav.indexOf(id);
         if (idx === -1) { fav.push(id); DFUtil.toast('Добавлено в избранное', 'success', 1800); }
@@ -258,7 +258,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (favBtn) favBtn.addEventListener('click', () => { if(favPanel) favPanel.classList.add('open'); if(cartOverlay) cartOverlay.classList.add('active'); });
     if (closeFavBtn) closeFavBtn.addEventListener('click', closeCart);
 
-    // === БЫСТРЫЙ ПРОСМОТР ===
     function openQuickView(id) {
         const p = allProducts.find(x => x.id === id);
         if (!p || !quickViewBody) return;
@@ -281,7 +280,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (closeQuickView) closeQuickView.addEventListener('click', () => quickViewModal.classList.remove('open'));
 
-    // === ОФОРМЛЕНИЕ ЗАКАЗА ===
     if (checkoutBtn) checkoutBtn.addEventListener('click', () => { if (cart.length === 0) return; closeCart(); checkoutModal.classList.add('open'); });
     if (closeCheckout) closeCheckout.addEventListener('click', () => checkoutModal.classList.remove('open'));
 
@@ -297,7 +295,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // === СТРАНИЦЫ / МОДАЛКИ ===
     document.querySelectorAll('[data-page]').forEach(link => {
         link.addEventListener('click', e => {
             e.preventDefault();
@@ -322,7 +319,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     if (closePage) closePage.addEventListener('click', () => pageModal.classList.remove('open'));
 
-    // === АВТОРИЗАЦИЯ ===
     function updateAuthUI() {
         if (!authBtn) return;
         if (Auth.isLoggedIn()) {
