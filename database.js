@@ -9,9 +9,9 @@ const pool = new Pool({
     database: process.env.DB_NAME || 'dropflow',
 });
 
-// Функция для автоматического создания таблиц при старте
 async function initDB() {
     try {
+        // Таблица заказов
         await pool.query(`
             CREATE TABLE IF NOT EXISTS orders (
                 id SERIAL PRIMARY KEY,
@@ -26,6 +26,32 @@ async function initDB() {
                 "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         `);
+
+        // Таблица товаров
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS products (
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(255) NOT NULL,
+                category VARCHAR(100) NOT NULL,
+                price INTEGER NOT NULL,
+                old_price INTEGER,
+                rating REAL DEFAULT 5,
+                popular BOOLEAN DEFAULT false,
+                hidden BOOLEAN DEFAULT false,
+                image TEXT,
+                description TEXT,
+                reviews JSONB DEFAULT '[]'
+            );
+        `);
+
+        // Таблица категорий
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS categories (
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(100) UNIQUE NOT NULL
+            );
+        `);
+
         console.log('✅ Таблицы в PostgreSQL успешно проверены/созданы.');
     } catch (err) {
         console.error('❌ Ошибка инициализации базы данных:', err);

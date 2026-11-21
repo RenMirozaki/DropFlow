@@ -56,7 +56,7 @@
                     </div>
                     <button id="addProductBtn" class="btn-accent">+ Добавить товар</button>
                 </div>
-                <p class="admin-hint">Нажмите на карточку товара, чтобы отредактировать её. Бегунок в углу скрывает товар с главной страницы.</p>
+                <p class="admin-hint">Нажмите «Ред.» для редактирования или «Удал.» для удаления товара.</p>
                 <div id="adminProductsList" class="products-grid admin-preview-grid"></div>
             </section>
 
@@ -85,7 +85,7 @@
                 <div id="adminUsersList" class="admin-list"></div>
             </section>
 
-            <!-- ВИЗУАЛЬНЫЙ РЕДАКТОР СТРАНИЦ -->
+            <!-- РЕДАКТОР СТРАНИЦ -->
             <section class="admin-section" data-section="pages">
                 <div class="tabs" style="margin-bottom: 20px;">
                     <button class="tab active" data-page="about">О нас</button>
@@ -97,7 +97,7 @@
                 
                 <div class="editor-layout" style="display: grid; grid-template-columns: 250px 1fr; gap: 20px;">
                     <div class="editor-sidebar" style="background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--r-md); padding: 20px;">
-                        <h3 style="font-size: 14px; color: #fff; margin-bottom: 15px; font-family: 'Montserrat', sans-serif;">Настройки вида</h3>
+                        <h3 style="font-size: 14px; color: #fff; margin-bottom: 15px;">Настройки вида</h3>
                         <div class="form-row" style="margin-bottom: 20px;">
                             <label style="font-size: 12px; color: var(--text-2); margin-bottom: 8px; display: block;">Главное фото (О нас)</label>
                             <input type="file" id="editImageAbout" accept="image/*" style="display: none;">
@@ -111,7 +111,7 @@
                         <button id="savePagesBtn" class="btn-accent full" style="margin-top: 30px;">Сохранить текст</button>
                     </div>
                     <div class="editor-preview" style="background: var(--bg); border: 1px solid var(--border); border-radius: var(--r-md); padding: 30px; min-height: 500px; position: relative;">
-                        <div style="color: var(--text-3); font-size: 12px; text-align: center; margin-bottom: 20px; border-bottom: 1px dashed var(--border); padding-bottom: 10px;">👁 Так страницу видит клиент (нажмите на текст, чтобы изменить)</div>
+                        <div style="color: var(--text-3); font-size: 12px; text-align: center; margin-bottom: 20px; border-bottom: 1px dashed var(--border); padding-bottom: 10px;">👁 Так страницу видит клиент</div>
                         <div id="liveEditorContent" contenteditable="true" style="outline: none; color: var(--text); font-family: 'Montserrat', sans-serif; line-height: 1.6; font-size: 15px;"></div>
                     </div>
                 </div>
@@ -119,25 +119,22 @@
 
             <!-- НАСТРОЙКИ -->
             <section class="admin-section" data-section="settings">
-                <!-- Блок SMS -->
+                <!-- Блок КАТЕГОРИЙ -->
                 <div class="settings-grid" style="margin-bottom: 20px; border-color: var(--accent-soft);">
-                    <h3 style="grid-column: 1 / -1; color: #fff; margin-bottom: 10px; font-family: 'Montserrat', sans-serif; font-size: 15px;">📱 Настройки SMS-уведомлений</h3>
-                    <div class="form-row"><label>API-ключ (SMS.ru / Twilio)</label><input type="text" id="setSmsApiKey" class="input" placeholder="Вставьте ключ..."></div>
-                    <div class="form-row"><label>Имя отправителя</label><input type="text" id="setSmsSender" class="input" placeholder="DropFlow"></div>
-                    <div class="form-row" style="grid-column: 1 / -1; display: flex; align-items: center; gap: 10px;">
-                        <input type="checkbox" id="setSmsEnabled" style="width: 18px; height: 18px; accent-color: var(--accent);">
-                        <label for="setSmsEnabled" style="margin: 0; cursor: pointer;">Включить отправку SMS клиентам</label>
-                    </div>
+                    <h3 style="grid-column: 1 / -1; color: #fff; margin-bottom: 10px; font-family: 'Montserrat', sans-serif; font-size: 15px;">📂 Категории товаров</h3>
+                    <div class="form-row"><label>Новая категория</label><input type="text" id="newCategoryInput" class="input" placeholder="Например: Мебель"></div>
+                    <button id="addCategoryBtn" class="btn-accent" style="align-self: end;">Добавить</button>
+                    <select id="categoriesList" class="input select" size="5" style="grid-column: 1 / -1; margin-top:10px;"></select>
                 </div>
 
-                <!-- Блок Реквизитов и контактов -->
+                <!-- Блок Реквизитов -->
                 <div class="settings-grid">
-                    <div class="form-row"><label>Юридическое название (для футера)</label><input type="text" id="setLegalName" class="input" placeholder="Самозанятый Иванов Иван"></div>
-                    <div class="form-row"><label>ИНН самозанятого</label><input type="text" id="setInn" class="input" placeholder="000000000000"></div>
+                    <div class="form-row"><label>Юридическое название</label><input type="text" id="setLegalName" class="input" placeholder="Самозанятый Иванов Иван"></div>
+                    <div class="form-row"><label>ИНН</label><input type="text" id="setInn" class="input" placeholder="000000000000"></div>
                     <div class="form-row"><label>Email</label><input type="email" id="setEmail" class="input"></div>
                     <div class="form-row"><label>Телефон</label><input type="tel" id="setPhone" class="input" placeholder="+7 (___) ___-__-__"></div>
                     <div class="form-row"><label>Адрес</label><input type="text" id="setAddress" class="input"></div>
-                    <div class="form-row"><label>Ссылка на ВК (полная)</label><input type="text" id="setVk" class="input"></div>
+                    <div class="form-row"><label>Ссылка на ВК</label><input type="text" id="setVk" class="input"></div>
                 </div>
                 <div class="editor-actions">
                     <button id="saveSettingsBtn" class="btn-accent">Сохранить настройки</button>
@@ -147,6 +144,7 @@
         </main>
     </div>
 
+    <!-- МОДАЛКА ТОВАРА -->
     <div id="productModal" class="modal">
         <div class="modal-content">
             <button class="close-btn" data-close="productModal">&times;</button>
@@ -155,7 +153,8 @@
                 <input type="hidden" name="id">
                 <div class="form-grid-2">
                     <div class="form-row"><label>Название *</label><input type="text" name="name" class="input" required></div>
-                    <div class="form-row"><label>Категория *</label><input type="text" name="category" class="input" required></div>
+                    <!-- ВЫБОР КАТЕГОРИИ (п. 12) -->
+                    <div class="form-row"><label>Категория *</label><select name="category" id="productCategorySelect" class="input select" required></select></div>
                     <div class="form-row"><label>Цена, ₽ *</label><input type="text" name="price" class="input price-input" required placeholder="Введите сумму"></div>
                     <div class="form-row"><label>Старая цена, ₽</label><input type="text" name="oldPrice" class="input price-input" placeholder="Введите сумму"></div>
                     <div class="form-row"><label>Рейтинг (0–5)</label><input type="number" name="rating" class="input" min="0" max="5" step="0.1" value="5"></div>
@@ -164,7 +163,6 @@
                 <div class="form-row">
                     <label>Картинка товара</label>
                     <div class="image-upload-wrapper">
-                        <!-- П. 3 (Админка): Изменили текст кнопки -->
                         <label for="imageFile" class="btn-ghost" style="cursor:pointer; display:inline-block; padding: 10px 20px; border: 1px solid var(--border); border-radius: var(--r-sm);">📁 Выбрать фото</label>
                         <input type="file" id="imageFile" accept="image/*" style="display:none;">
                         <input type="hidden" name="image" id="imagePath">
@@ -180,6 +178,7 @@
         </div>
     </div>
 
+    <!-- МОДАЛКА ЗАКАЗА -->
     <div id="orderModal" class="modal">
         <div class="modal-content">
             <button class="close-btn" data-close="orderModal">&times;</button>
@@ -188,6 +187,7 @@
         </div>
     </div>
 
+    <!-- МОДАЛКА ПРОМОКОДА -->
     <div id="promoModal" class="modal">
         <div class="modal-content small">
             <button class="close-btn" data-close="promoModal">&times;</button>

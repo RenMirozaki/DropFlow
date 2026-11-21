@@ -13,6 +13,9 @@
 
     <header class="header">
         <div class="header-inner">
+            <!-- Бургер-кнопка (П. 4) -->
+            <button id="burgerBtn" class="burger-btn">☰</button>
+
             <a href="index.html" class="logo">
                 <svg class="logo-icon" viewBox="0 0 48 48" width="42" height="42">
                     <defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#e8b06a"/><stop offset="100%" stop-color="#7eb8f0"/></linearGradient></defs>
@@ -22,12 +25,14 @@
                 </svg>
                 <span class="logo-text"><b>DROPFLOW</b><i>ONLINE STORE</i></span>
             </a>
+
             <nav class="nav">
                 <a href="#catalog">Каталог</a>
                 <a href="#" data-page="about">О нас</a>
                 <a href="#" data-page="faq">Вопросы</a>
                 <a href="#" data-page="contacts">Контакты</a>
             </nav>
+
             <div class="header-actions">
                 <button id="authBtn" class="btn-ghost" style="cursor: pointer;">
                     <span class="icon">👤</span> <span id="authBtnText">Войти</span>
@@ -37,6 +42,14 @@
             </div>
         </div>
     </header>
+
+    <!-- Мобильное меню -->
+    <div id="mobileMenu" class="mobile-menu">
+        <a href="#catalog">Каталог</a>
+        <a href="#" data-page="about">О нас</a>
+        <a href="#" data-page="faq">Вопросы</a>
+        <a href="#" data-page="contacts">Контакты</a>
+    </div>
 
     <section class="hero">
         <div class="hero-overlay"></div>
@@ -48,7 +61,13 @@
 
     <section class="catalog" id="catalog">
         <div class="container">
+            <!-- Баннер (П. 2) -->
+            <div id="catalogBanner" class="catalog-banner">
+                <!-- Сюда рендерится баннер из app.js -->
+            </div>
+
             <div class="section-head"><div><h2 class="section-title" style="font-size: 4rem; margin-bottom: 20px;">Каталог</h2></div></div>
+            
             <div class="filters">
                 <input type="text" id="searchInput" class="input" placeholder="🔍 Поиск по названию...">
                 <select id="categoryFilter" class="input select"><option value="all">Все товары</option></select>
@@ -58,10 +77,9 @@
         </div>
     </section>
 
-    <!-- Модалка для страниц (О нас, FAQ, Контакты) -->
+    <!-- Модалка для страниц -->
     <div id="pageModal" class="modal">
         <div class="modal-decor-wrapper">
-            <!-- Объекты удалены -->
             <div class="modal-content">
                 <button id="closePage" class="close-btn">&times;</button>
                 <div id="pageBody"></div>
@@ -131,10 +149,27 @@
             <button id="logoutFromProfile" class="btn-ghost full" style="margin-top: 20px;">Выйти из аккаунта</button>
         </div>
     </div>
+
     <div id="toastBox" class="toast-box"></div>
 
     <script src="js/data.js"></script>
     <script src="js/auth.js"></script>
     <script src="js/app.js"></script>
+    <script>
+        // Логика бургер-меню
+        const burgerBtn = document.getElementById('burgerBtn');
+        const mobileMenu = document.getElementById('mobileMenu');
+        if (burgerBtn && mobileMenu) {
+            burgerBtn.addEventListener('click', () => {
+                mobileMenu.classList.toggle('open');
+            });
+            // Закрываем меню при клике на ссылку
+            mobileMenu.querySelectorAll('a').forEach(link => {
+                link.addEventListener('click', () => {
+                    mobileMenu.classList.remove('open');
+                });
+            });
+        }
+    </script>
 </body>
 </html>

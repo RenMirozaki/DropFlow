@@ -4,18 +4,14 @@ const db = require('./database');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const { body, validationResult } = require('express-validator');
-const axios = require('axios'); // Используем axios для Telegram
+const axios = require('axios');
 require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// 1. Безопасность заголовков (Helmet)
-app.use(helmet({
-    contentSecurityPolicy: false,
-}));
+app.use(helmet({ contentSecurityPolicy: false }));
 
-// 2. Ограничение количества запросов (Rate Limiting)
 const generalLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 100,
@@ -23,18 +19,75 @@ const generalLimiter = rateLimit({
 });
 app.use('/api/', generalLimiter);
 
-// Строгий лимит для оформления заказа
 const orderLimiter = rateLimit({
     windowMs: 10 * 60 * 1000,
     max: 5,
     message: 'Слишком много попыток оформления заказа. Подождите немного.'
 });
 
-// Middleware
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '/')));
 
-// === API: Создать заказ (с валидацией) ===
+// === API: ТОВАРЫ ===
+app.get('/api/products', async (req, res) => {
+    try {
+        const result = await db.query('SELECT * FROM products ORDER BY id DESC');
+        res.json(result.rows);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/products', async (req, res) => {
+    const { id, name, category, price, oldPrice, rating, popular, image, description, hidden } = req.body;
+    try {
+        if (id) {
+            await db.query(
+                `UPDATE products SET name=$1, category=$2, price=$3, old_price=$4, rating=$5, popular=$6, image=$7, description=$8, hidden=$9 WHERE id=$10`,
+                [name, category, price, oldPrice, rating, popular, image, description, hidden, id]
+            );
+        } else {
+            await db.query(
+                `INSERT INTO products (name, category, price, old_price, rating, popular, image, description, hidden) 
+                 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+                [name, category, price, oldPrice, rating, popular, image, description, hidden]
+            );
+        }
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.delete('/api/products/:id', async (req, res) => {
+    try {
+        await db.query('DELETE FROM products WHERE id = $1', [req.params.id]);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// === API: КАТЕГОРИИ ===
+app.get('/api/categories', async (req, res) => {
+    try {
+        const result = await db.query('SELECT * FROM categories ORDER BY name');
+        res.json(result.rows);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/categories', async (req, res) => {
+    try {
+        await db.query('INSERT INTO categories (name) VALUES ($1) ON CONFLICT DO NOTHING', [req.body.name]);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// === API: ЗАКАЗЫ ===
 app.post('/api/order', orderLimiter, [
     body('name').trim().isLength({ min: 3 }).withMessage('Укажите ФИО').matches(/^[а-яА-ЯёЁa-zA-Z\s]+$/).withMessage('ФИО должно содержать только буквы'),
     body('phone').trim().isLength({ min: 10 }).withMessage('Укажите телефон'),
@@ -47,10 +100,8 @@ app.post('/api/order', orderLimiter, [
     }
 
     try {
-        // Данные уже очищены и проверены валидатором, SQL-инъекции исключены
         const { name, phone, email, address, comment, items, total } = req.body;
 
-        // Сохраняем в базу (параметризованный запрос)
         const result = await db.query(
             `INSERT INTO orders (name, phone, email, address, comment, items, total, status) 
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
@@ -60,36 +111,19 @@ app.post('/api/order', orderLimiter, [
         const orderId = result.rows[0].id;
         console.log(`🛒 Новый заказ №${orderId} от ${name} на сумму ${total} ₽`);
 
-        // === УВЕДОМЛЕНИЕ В TELEGRAM ДЛЯ АДМИНА ===
         const tgToken = process.env.TELEGRAM_BOT_TOKEN;
         const tgChatId = process.env.TELEGRAM_CHAT_ID;
 
         if (tgToken && tgChatId) {
             try {
-                const message = `🛒 *Новый заказ №${orderId}*\n\n` +
-                                `👤 ${name}\n` +
-                                `📞 ${phone}\n` +
-                                `📍 ${address}\n` +
-                                `💰 Сумма: ${total} ₽`;
-
-                const tgUrl = `https://api.telegram.org/bot${tgToken}/sendMessage`;
-                
-                await axios.post(tgUrl, {
-                    chat_id: tgChatId,
-                    text: message,
-                    parse_mode: 'Markdown'
+                const message = `🛒 *Новый заказ №${orderId}*\n\n👤 ${name}\n📞 ${phone}\n📍 ${address}\n💰 Сумма: ${total} ₽`;
+                await axios.post(`https://api.telegram.org/bot${tgToken}/sendMessage`, {
+                    chat_id: tgChatId, text: message, parse_mode: 'Markdown'
                 });
-                
                 console.log('📨 Уведомление в Telegram отправлено.');
             } catch (tgErr) {
-                if (tgErr.response) {
-                    console.error('❌ Ошибка Telegram API:', tgErr.response.data.description);
-                } else {
-                    console.error('❌ Ошибка сети при отправке в Telegram:', tgErr.message);
-                }
+                console.error('❌ Ошибка Telegram:', tgErr.message);
             }
-        } else {
-            console.log('⚠️ Уведомление в Telegram не отправлено: не указан токен или chat_id в .env');
         }
 
         res.status(200).json({ success: true, orderId: orderId });
@@ -99,18 +133,15 @@ app.post('/api/order', orderLimiter, [
     }
 });
 
-// === API: Получить все заказы ===
 app.get('/api/orders', async (req, res) => {
     try {
         const result = await db.query('SELECT * FROM orders ORDER BY id DESC');
         res.status(200).json(result.rows);
     } catch (err) {
-        console.error('Ошибка получения заказов:', err);
         res.status(500).json({ error: 'Ошибка сервера' });
     }
 });
 
-// === API: Обновить статус заказа ===
 app.post('/api/order/status', async (req, res) => {
     try {
         const { id, status } = req.body;
@@ -118,17 +149,13 @@ app.post('/api/order/status', async (req, res) => {
         if (!allowedStatuses.includes(status)) {
             return res.status(400).json({ success: false, error: 'Неверный статус' });
         }
-
         await db.query('UPDATE orders SET status = $1 WHERE id = $2', [status, id]);
-        console.log(`🔄 Статус заказа №${id} изменен на: ${status}`);
         res.status(200).json({ success: true });
     } catch (err) {
-        console.error('Ошибка обновления статуса:', err);
         res.status(500).json({ success: false });
     }
 });
 
-// Запуск сервера
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Сервер запущен на http://localhost:${PORT}`);
 });
