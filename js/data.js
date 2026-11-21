@@ -11,7 +11,6 @@ const DF = {
     }
 };
 
-// Демо-страницы (оставляем для работы модалок "О нас", "Оферта" и т.д.)
 const DF_DEFAULT_PAGES = {
     about: `<h2>О компании DropFlow</h2><p>DropFlow — это магазин, где каждая вещь отобрана вручную...</p>`,
     privacy: `<h2>Политика конфиденциальности</h2><p>...</p>`,
@@ -35,6 +34,11 @@ const DF_DEFAULT_PROMOS = [
     { code: 'FLOW500', type: 'fixed', value: 500, minTotal: 3000 }
 ];
 
+const DF_DEFAULT_USERS = [
+    { login: 'admin', password: '12345', name: 'Администратор', email: 'admin@dropflow.ru', phone: '+7 (999) 000-00-00', role: 'admin', createdAt: '2025-01-01' },
+    { login: 'ivan',  password: 'qwerty', name: 'Иван Петров', email: 'ivan@mail.ru', phone: '+7 (999) 111-22-33', role: 'user', createdAt: '2025-03-15' }
+];
+
 const Store = {
     _get(key, def) {
         try {
@@ -51,6 +55,7 @@ const Store = {
         if (!localStorage.getItem(DF.KEYS.pages)) this._set(DF.KEYS.pages, DF_DEFAULT_PAGES);
         if (!localStorage.getItem(DF.KEYS.settings)) this._set(DF.KEYS.settings, DF_DEFAULT_SETTINGS);
         if (!localStorage.getItem(DF.KEYS.promos)) this._set(DF.KEYS.promos, DF_DEFAULT_PROMOS);
+        if (!localStorage.getItem(DF.KEYS.users)) this._set(DF.KEYS.users, DF_DEFAULT_USERS);
     },
 
     getPages() { return this._get(DF.KEYS.pages, {}); },
@@ -63,6 +68,10 @@ const Store = {
     setCart(c) { return this._set(DF.KEYS.cart, c); },
     getFav() { return this._get(DF.KEYS.fav, []); },
     setFav(f) { return this._set(DF.KEYS.fav, f); },
+    
+    getUsers() { return this._get(DF.KEYS.users, []); },
+    setUsers(list) { return this._set(DF.KEYS.users, list); },
+
     getSession() { return this._get(DF.KEYS.session, null); },
     setSession(s) { return this._set(DF.KEYS.session, s); },
     clearSession() { this._remove(DF.KEYS.session); },
