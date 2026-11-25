@@ -278,12 +278,12 @@ app.post('/api/order', orderLimiter, [
     const errors = validationResult(req);
     if (!errors.isEmpty()) return res.status(400).json({ success: false, errors: errors.array() });
     try {
-        const { name, phone, email, address, items, total } = req.body;
+        const { name, phone, email, address, items, total, comment } = req.body;
         const user = await getUser(req);
         const result = await db.query(
-            `INSERT INTO orders (name, phone, email, address, items, total, status, payment_status, user_login)
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id`,
-            [name, phone, email || (user ? user.email : null), address, JSON.stringify(items), total, 'active', 'pending', user ? user.login : null]);
+            `INSERT INTO orders (name, phone, email, address, comment, items, total, status, payment_status, user_login)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id`,
+            [name, phone, email || (user ? user.email : null), address, comment || null, JSON.stringify(items), total, 'active', 'pending', user ? user.login : null]);
         const orderId = result.rows[0].id;
         console.log(`🛒 Новый заказ №${orderId} от ${name} на сумму ${total} ₽`);
         await tgNotify(`🛒 *Новый заказ №${orderId}*\n\n👤 ${name}\n📞 ${phone}\n📍 ${address}\n💰 Сумма: ${total} ₽`);
@@ -405,14 +405,13 @@ app.post('/api/pickup', requireAdmin, async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Массовая загрузка: { items: [{name,address,city,lat,lng}, ...] } или { text: "Город;Название;Адрес;ш;д ..." }
+// Массовая загрузка: { items: [...] } или { text: "Город;Название;Адрес;ш;д ..." }
 app.post('/api/pickup/bulk', requireAdmin, async (req, res) => {
     try {
         let items = req.body.items || [];
         if (req.body.text) {
             items = req.body.text.split('\n').map(line => line.trim()).filter(Boolean).map(line => {
                 const parts = line.split(/[;,\t]/).map(s => s.trim());
-                // Формат: Город;Название;Адрес;широта;долгота
                 return { city: parts[0], name: parts[1], address: parts[2], lat: parts[3] || null, lng: parts[4] || null };
             });
         }
@@ -435,7 +434,7 @@ app.delete('/api/pickup/:id', requireAdmin, async (req, res) => {
 
 // ================= КОММЕНТАРИИ (с премодерацией) =================
 
-// Опубликованные комментарии к товару
+// Опубликованные комментарии
 app.get('/api/comments', async (req, res) => {
     try {
         const productId = req.query.productId;
@@ -476,6 +475,25 @@ app.post('/api/comments/moderate', requireAdmin, async (req, res) => {
         else await db.query('DELETE FROM comments WHERE id = $1', [id]);
         res.json({ success: true });
     } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ================= ПОЛЬЗОВАТЕЛИ (для админки) =================
+
+app.get('/api/users', requireAdmin, async (req, res) => {
+    try {
+        const r = await db.query('SELECT login, name, email, phone, role, created_at FROM users ORDER BY id');
+        res.json(r.rows);
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ================= ОБРАБОТЧИК ОШИБОК =================
+
+// Ошибки multer и прочие — в формате JSON, чтобы клиент мог их показать
+app.use((err, req, res, next) => {
+    console.error('Ошибка запроса:', err.message);
+    if (err.code === 'LIMIT_FILE_SIZE') return res.status(400).json({ success: false, error: 'Файл больше 5 МБ' });
+    if (res.headersSent) return next(err);
+    res.status(500).json({ success: false, error: 'Ошибка загрузки: ' + err.message });
 });
 
 app.listen(PORT, '0.0.0.0', () => {

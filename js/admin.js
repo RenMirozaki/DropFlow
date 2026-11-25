@@ -5,6 +5,32 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('adminApp').hidden = false;
     document.getElementById('adminApp').style.display = 'grid';
 
+    // Сжатие изображения на клиенте перед загрузкой
+    function compressImage(file, maxSide = 1600, quality = 0.85) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            const url = URL.createObjectURL(file);
+            img.onload = () => {
+                let { width, height } = img;
+                const scale = Math.min(1, maxSide / Math.max(width, height));
+                width = Math.round(width * scale);
+                height = Math.round(height * scale);
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+                canvas.toBlob(blob => {
+                    URL.revokeObjectURL(url);
+                    if (!blob) return reject(new Error('Не удалось сжать изображение'));
+                    const name = file.name.replace(/\.[^.]+$/, '') + '.jpg';
+                    resolve(new File([blob], name, { type: 'image/jpeg' }));
+                }, 'image/jpeg', quality);
+            };
+            img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Не удалось прочитать файл')); };
+            img.src = url;
+        });
+    }
+
     initAdmin();
 
     async function initAdmin() {
@@ -46,6 +72,15 @@ document.addEventListener('DOMContentLoaded', () => {
             if (res.status === 401) { Auth.logout(); window.location.href = 'login.html'; return data; }
             if (res.status === 403) DFUtil.toast('Нет прав администратора', 'error');
             return data;
+        }
+
+        // Универсальная загрузка файла с сжатием
+        async function uploadFile(file) {
+            const compressed = await compressImage(file);
+            const fd = new FormData();
+            fd.append('file', compressed);
+            const res = await fetch('/api/upload', { method: 'POST', headers: Store.authHeaders(), body: fd });
+            return res.json();
         }
 
         // === ЗАГРУЗКА ДАННЫХ ===
@@ -193,18 +228,15 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        // Загрузка фото товара на сервер
+        // Загрузка фото товара на сервер (со сжатием)
         const imageFileInput = document.getElementById('imageFile');
         if (imageFileInput) {
             imageFileInput.addEventListener('change', async (e) => {
                 const file = e.target.files[0];
                 if (!file) return;
                 document.getElementById('imageFileName').textContent = 'Загрузка...';
-                const fd = new FormData();
-                fd.append('file', file);
                 try {
-                    const res = await fetch('/api/upload', { method: 'POST', headers: Store.authHeaders(), body: fd });
-                    const data = await res.json();
+                    const data = await uploadFile(file);
                     if (data.success) {
                         document.getElementById('imagePath').value = data.url;
                         document.getElementById('imageFileName').textContent = 'Загружено ✓';
@@ -214,6 +246,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 } catch (err) {
                     document.getElementById('imageFileName').textContent = 'Ошибка загрузки';
+                    DFUtil.toast(err.message || 'Ошибка сжатия', 'error');
                 }
             });
         }
@@ -281,7 +314,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const o = orders.find(x => x.id === id);
             if (!o || !orderModalBody) return;
             let items = [];
-            try { items = typeof o.items === 'string' ? JSON.parse(o.items) : o.items; } catch (e) { items = []; }
+            try { items = typeof o.items === 'string' ? JSON.parse(o.items) : (o.items || []); } catch (e) { items = []; }
             orderModalBody.innerHTML = `
                 <h4>${DFUtil.escapeHtml(o.name)}</h4>
                 <p>📞 ${DFUtil.escapeHtml(o.phone)}</p>
@@ -357,17 +390,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 const file = e.target.files[0];
                 if (!file) return;
                 document.getElementById('bannerImageName').textContent = 'Загрузка...';
-                const fd = new FormData();
-                fd.append('file', file);
-                const res = await fetch('/api/upload', { method: 'POST', headers: Store.authHeaders(), body: fd });
-                const data = await res.json();
-                if (data.success) {
-                    const s = Store.getSettings();
-                    s.bannerImage = data.url;
-                    await Store.saveSettings(s);
-                    document.getElementById('bannerImageName').textContent = 'Загружено ✓';
-                    DFUtil.toast('Баннер обновлён', 'success');
-                } else DFUtil.toast(data.error || 'Ошибка загрузки', 'error');
+                try {
+                    const data = await uploadFile(file);
+                    if (data.success) {
+                        const s = Store.getSettings();
+                        s.bannerImage = data.url;
+                        await Store.saveSettings(s);
+                        document.getElementById('bannerImageName').textContent = 'Загружено ✓';
+                        DFUtil.toast('Баннер обновлён', 'success');
+                    } else DFUtil.toast(data.error || 'Ошибка загрузки', 'error');
+                } catch (err) {
+                    document.getElementById('bannerImageName').textContent = 'Ошибка загрузки';
+                    DFUtil.toast(err.message || 'Ошибка сжатия', 'error');
+                }
             });
         }
 
@@ -384,17 +419,18 @@ document.addEventListener('DOMContentLoaded', () => {
             inp.addEventListener('change', async (e) => {
                 const file = e.target.files[0];
                 if (!file) return;
-                const fd = new FormData();
-                fd.append('file', file);
-                const res = await fetch('/api/upload', { method: 'POST', headers: Store.authHeaders(), body: fd });
-                const data = await res.json();
-                if (data.success) {
-                    const s = Store.getSettings();
-                    s[cfg.key] = data.url;
-                    await Store.saveSettings(s);
-                    if (label) label.textContent = 'Загружено ✓';
-                    DFUtil.toast('Фон обновлён', 'success');
-                } else DFUtil.toast(data.error || 'Ошибка загрузки', 'error');
+                try {
+                    const data = await uploadFile(file);
+                    if (data.success) {
+                        const s = Store.getSettings();
+                        s[cfg.key] = data.url;
+                        await Store.saveSettings(s);
+                        if (label) label.textContent = 'Загружено ✓';
+                        DFUtil.toast('Фон обновлён', 'success');
+                    } else DFUtil.toast(data.error || 'Ошибка загрузки', 'error');
+                } catch (err) {
+                    DFUtil.toast(err.message || 'Ошибка сжатия', 'error');
+                }
             });
         });
 
