@@ -1,47 +1,89 @@
+// auth.js — DropFlow
 const Auth = {
+    // Текущий пользователь из сессии
     current() { return Store.getSession(); },
     isAdmin() { const u = this.current(); return !!u && u.role === 'admin'; },
     isLoggedIn() { return !!this.current(); },
 
-    login(loginOrEmail, password) {
-        const users = Store.getUsers();
-        const key = String(loginOrEmail).trim().toLowerCase();
-        const user = users.find(u => u.login.toLowerCase() === key || (u.email && u.email.toLowerCase() === key));
-        
-        if (!user) return { ok: false, error: 'Пользователь не найден' };
-        if (user.password !== password) return { ok: false, error: 'Неверный пароль' };
+    // Вход через сервер
+    async login(loginOrEmail, password) {
+        try {
+            const res = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ login: loginOrEmail, password })
+            });
+            const data = await res.json();
+            if (!data.success) return { ok: false, error: data.error || 'Ошибка входа' };
 
-        const session = { login: user.login, name: user.name, email: user.email, phone: user.phone, role: user.role, loginAt: new Date().toISOString() };
-        Store.setSession(session);
-        
-        if (user.role === 'admin') {
-            sessionStorage.setItem('df_admin_logged', 'true');
+            const session = {
+                token: data.token,
+                login: data.user.login,
+                name: data.user.name,
+                email: data.user.email,
+                phone: data.user.phone,
+                role: data.user.role,
+                loginAt: new Date().toISOString()
+            };
+            Store.setSession(session);
+            return { ok: true, user: session };
+        } catch (e) {
+            console.error('Ошибка входа:', e);
+            return { ok: false, error: 'Не удалось связаться с сервером' };
         }
-        return { ok: true, user: session };
     },
 
-    register({ name, email, phone, login, password }) {
+    // Регистрация через сервер
+    async register({ name, email, phone, login, password }) {
         if (!name || !email || !phone || !login || !password) return { ok: false, error: 'Заполните все поля' };
-                // Проверка, что введено хотя бы Имя и Фамилия
+        // Проверка, что введено ФИО (минимум 3 слова)
         if (name.trim().split(/\s+/).length < 3) {
             return { ok: false, error: 'Пожалуйста, укажите ФИО (например: Иванов Иван Иванович).' };
         }
         if (password.length < 6) return { ok: false, error: 'Пароль минимум 6 символов' };
 
-        const users = Store.getUsers();
-        if (users.some(u => u.login.toLowerCase() === login.toLowerCase())) return { ok: false, error: 'Логин занят' };
-        
-        const newUser = { login, password, name, email, phone, role: 'user', createdAt: new Date().toISOString() };
-        users.push(newUser);
-        Store.setUsers(users);
+        try {
+            const res = await fetch('/api/auth/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, email, phone, login, password })
+            });
+            const data = await res.json();
+            if (!data.success) return { ok: false, error: data.error || 'Ошибка регистрации' };
 
-        const session = { login: newUser.login, name: newUser.name, email: newUser.email, phone: newUser.phone, role: newUser.role, loginAt: new Date().toISOString() };
-        Store.setSession(session);
-        return { ok: true, user: session };
+            const session = {
+                token: data.token,
+                login: data.user.login,
+                name: data.user.name,
+                email: data.user.email,
+                phone: data.user.phone,
+                role: data.user.role,
+                loginAt: new Date().toISOString()
+            };
+            Store.setSession(session);
+            return { ok: true, user: session };
+        } catch (e) {
+            console.error('Ошибка регистрации:', e);
+            return { ok: false, error: 'Не удалось связаться с сервером' };
+        }
     },
 
-    logout() { 
-        Store.clearSession(); 
+    // Обновление данных пользователя с сервера (при загрузке страницы)
+    async refresh() {
+        if (!this.isLoggedIn()) return;
+        try {
+            const res = await fetch('/api/auth/me', { headers: Store.authHeaders() });
+            if (res.status === 401) { this.logout(); return; }
+            const data = await res.json();
+            if (data.success) {
+                const s = Store.getSession();
+                Store.setSession(Object.assign({}, s, data.user));
+            }
+        } catch (e) { /* сервер недоступен — оставляем текущую сессию */ }
+    },
+
+    logout() {
+        Store.clearSession();
         sessionStorage.removeItem('df_admin_logged');
     }
 };

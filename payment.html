@@ -4,48 +4,80 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Оплата — DropFlow</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body class="auth-page">
+    <a href="index.html" class="auth-back">← Вернуться в магазин</a>
 
-    <a href="index.html" class="auth-back">← На главную</a>
-
-    <div class="auth-wrap" style="grid-template-columns: 1fr; max-width: 600px; text-align: center;">
-        <div class="auth-card" style="padding: 60px 40px;">
-            
-            <!-- 3D Логотип -->
-            <div class="auth-logo" style="margin-bottom: 40px;">
-                <svg viewBox="0 0 48 48" width="64" height="64" style="filter: drop-shadow(0 15px 20px rgba(0,0,0,0.6)) drop-shadow(0 0 30px rgba(232,176,106,0.4)); transform: perspective(500px) rotateX(15deg) rotateY(-10deg);">
-                    <defs><linearGradient id="lgPay" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#e8b06a"/><stop offset="100%" stop-color="#7eb8f0"/></linearGradient></defs>
-                    <path d="M24 4 L42 14 V34 L24 44 L6 34 V14 Z" fill="none" stroke="url(#lgPay)" stroke-width="2"/>
-                    <path d="M16 18 H26 a6 6 0 0 1 0 12 H16 Z" fill="none" stroke="url(#lgPay)" stroke-width="2.5"/>
-                    <circle cx="34" cy="34" r="3" fill="#e8b06a"/>
+    <div class="auth-wrap" style="grid-template-columns:1fr; max-width:560px;">
+        <div class="auth-card">
+            <div class="auth-logo">
+                <svg width="48" height="48" viewBox="0 0 36 36" fill="none">
+                    <rect x="1" y="1" width="34" height="34" stroke="#e8b06a" stroke-width="2"/>
+                    <path d="M10 22 L18 10 L26 22 Z" fill="#e8b06a"/>
                 </svg>
+                <h1>DROPFLOW</h1>
+                <p class="auth-sub">Статус заказа</p>
             </div>
 
-            <h2 style="margin-bottom: 20px; font-size: 32px; color: #fff; text-shadow: 2px 2px 4px rgba(0,0,0,0.5);">Оплата заказа</h2>
-            
-            <p style="color: var(--text-2); margin-bottom: 10px; font-size: 15px;">Сумма к оплате:</p>
-            <p style="margin-bottom: 30px;">
-                <b id="payAmount" style="color: var(--accent); font-size: 36px; text-shadow: 0 0 15px rgba(232,176,106,0.4);">0 ₽</b>
+            <div id="payStatus" style="text-align:center; padding:20px 0;">
+                <p style="color:var(--text-2);">Загрузка статуса заказа...</p>
+            </div>
+
+            <div style="display:flex; gap:10px; margin-top:24px; justify-content:center;">
+                <a href="index.html" class="btn-accent">В каталог</a>
+                <button class="btn-ghost" id="checkAgainBtn">Обновить статус</button>
+            </div>
+
+            <p class="auth-hint" style="margin-top:20px;">
+                Если оплата прошла, но статус не обновился — обновите страницу через минуту:
+                банк подтверждает платёж не мгновенно.
             </p>
-            
-            <p style="color: var(--text-3); font-size: 14px; margin-bottom: 40px; padding: 15px; border: 1px dashed var(--border); border-radius: var(--r-sm);">
-                Это заглушка. Скоро здесь будет интерфейс ЮKassa.
-            </p>
-            
-            <!-- Кнопка под новые стили -->
-            <a href="index.html" class="btn-accent full big">Вернуться на сайт</a>
         </div>
     </div>
 
-    <script>
-        // Показываем сумму из localStorage
-        const total = localStorage.getItem('df_last_total') || '0';
-        document.getElementById('payAmount').textContent = Number(total).toLocaleString('ru-RU') + ' ₽';
-    </script>
+    <div class="toast-box" id="toastBox"></div>
+
+<script src="js/data.js"></script>
+<script src="js/auth.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const box = document.getElementById('payStatus');
+        const params = new URLSearchParams(window.location.search);
+        const orderId = params.get('orderId');
+
+        function render(o) {
+            if (!o) { box.innerHTML = '<p style="color:var(--danger);">Заказ не найден</p>'; return; }
+            const payLabels = {
+                'pending': ['⏳ Оплата не завершена', 'Оплатите заказ — обычно это занимает пару минут.'],
+                'paid': ['✅ Заказ оплачен!', 'Спасибо за покупку! Мы уже приступили к сборке и свяжемся с вами.'],
+                'canceled': ['❌ Оплата отменена', 'Платёж был отменён. Вы можете оформить заказ заново.']
+            };
+            const [title, sub] = payLabels[o.payment_status] || ['Статус неизвестен', ''];
+            box.innerHTML = `
+                <h2 style="color:#fff; margin-bottom:10px;">Заказ №${o.id}</h2>
+                <div style="font-size:28px; color:var(--accent); font-weight:600; margin-bottom:8px;">${DFUtil.formatPrice(o.total)}</div>
+                <h3 style="color:${o.payment_status === 'paid' ? 'var(--success)' : o.payment_status === 'canceled' ? 'var(--danger)' : 'var(--warning)'}; margin-bottom:8px;">${title}</h3>
+                <p style="color:var(--text-2); font-size:13px;">${sub}</p>
+                <p style="color:var(--text-3); font-size:12px; margin-top:14px;">Статус доставки: ${o.status === 'active' ? 'Оформлен' : o.status}</p>
+            `;
+        }
+
+        async function check() {
+            if (!orderId) { box.innerHTML = '<p style="color:var(--danger);">Заказ не указан</p>'; return; }
+            try {
+                const res = await fetch('/api/payment-status/' + orderId);
+                const data = await res.json();
+                render(data.order);
+            } catch (e) {
+                box.innerHTML = '<p style="color:var(--danger);">Ошибка загрузки статуса</p>';
+            }
+        }
+
+        check();
+        document.getElementById('checkAgainBtn').addEventListener('click', check);
+    });
+</script>
 </body>
 </html>

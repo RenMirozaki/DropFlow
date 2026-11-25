@@ -1,5 +1,10 @@
-document.addEventListener('DOMContentLoaded', () => {
+// app.js — DropFlow
+document.addEventListener('DOMContentLoaded', async () => {
     if (!document.querySelector('.hero')) return;
+
+    // Обновляем сессию и данные с сервера
+    await Auth.refresh();
+    await Store.refreshServerData();
 
     const grid = document.getElementById('productsGrid');
     const searchInput = document.getElementById('searchInput');
@@ -40,13 +45,30 @@ document.addEventListener('DOMContentLoaded', () => {
     const favCount = document.getElementById('favCount');
     const toTop = document.getElementById('toTop');
     const payBtn = document.getElementById('payBtn');
+    const checkoutTotal = document.getElementById('checkoutTotal');
+    const deliveryType = document.getElementById('deliveryType');
+    const pickupRow = document.getElementById('pickupRow');
+    const addressRow = document.getElementById('addressRow');
+    const addressInput = document.getElementById('addressInput');
+    const pickPickupBtn = document.getElementById('pickPickupBtn');
+    const pickupModal = document.getElementById('pickupModal');
+    const pickupSearch = document.getElementById('pickupSearch');
+    const pickupPointsList = document.getElementById('pickupPointsList');
+    const pickupMapWrap = document.getElementById('pickupMapWrap');
+    const pickupMap = document.getElementById('pickupMap');
+    const reviewProduct = document.getElementById('reviewProduct');
+    const reviewText = document.getElementById('reviewText');
+    const reviewSubmit = document.getElementById('reviewSubmit');
 
     let allProducts = [];
     let cart = Store.getCart();
     let fav = Store.getFav();
     let appliedPromo = null;
+    let selectedPickup = null;
+    let pickupPoints = [];
+    let lastOrderId = null;
 
-    init();
+    await init();
 
     async function init() {
         await loadProducts();
@@ -58,8 +80,49 @@ document.addEventListener('DOMContentLoaded', () => {
         startTypewriter();
         initProfileTabs();
         renderBanner();
+        applyHeroBackground();
+        renderFooter();
+        renderAbout();
+        renderStaticPages();
     }
 
+    // ===== БАННЕР И ФОН =====
+    function renderBanner() {
+        const banner = document.getElementById('catalogBanner');
+        if (!banner) return;
+        const s = Store.getSettings();
+        if (s.bannerImage) {
+            banner.innerHTML = `<a href="#catalog"><img src="${DFUtil.escapeHtml(s.bannerImage)}" alt="Акция" style="width:100%; border:1px solid var(--accent); margin-bottom:30px;"></a>`;
+        } else {
+            banner.innerHTML = `
+                <div style="background: linear-gradient(135deg, var(--bg-2), var(--bg-3)); padding: 25px; text-align: center; border: 1px solid var(--accent); margin-bottom: 30px;">
+                    <h3 style="color: var(--accent); margin-bottom: 10px; font-size: 24px;">🔥 Акция!</h3>
+                    <p style="color: var(--text); font-size: 16px;">Скидка 10% на первый заказ по промокоду <b>WELCOME10</b></p>
+                </div>
+            `;
+        }
+    }
+
+    function applyHeroBackground() {
+        const hero = document.querySelector('.hero');
+        if (!hero) return;
+        const s = Store.getSettings();
+        if (s.heroImage) hero.style.backgroundImage = `url('${s.heroImage}')`;
+    }
+
+    function renderFooter() {
+        const el = document.getElementById('footerContacts');
+        if (!el) return;
+        const s = Store.getSettings();
+        el.innerHTML = `${DFUtil.escapeHtml(s.legalName || '')}<br>ИНН ${DFUtil.escapeHtml(s.inn || '')}<br>${DFUtil.escapeHtml(s.email || '')} · ${DFUtil.escapeHtml(s.phone || '')}`;
+    }
+
+    function renderAbout() {
+        const el = document.getElementById('aboutContent');
+        if (el) el.innerHTML = Store.getPages().about || '';
+    }
+
+    // ===== ТОВАРЫ =====
     async function loadProducts() {
         try {
             const res = await fetch('/api/products');
@@ -70,23 +133,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function renderBanner() {
-        const banner = document.getElementById('catalogBanner');
-        if (!banner) return;
-        banner.innerHTML = `
-            <div style="background: linear-gradient(135deg, var(--bg-2), var(--bg-3)); padding: 25px; text-align: center; border: 1px solid var(--accent); margin-bottom: 30px;">
-                <h3 style="color: var(--accent); margin-bottom: 10px; font-size: 24px;">🔥 Акция!</h3>
-                <p style="color: var(--text); font-size: 16px;">Скидка 10% на первый заказ по промокоду <b>WELCOME10</b></p>
-            </div>
-        `;
-    }
-
     async function renderCategories() {
         if (!categoryFilter) return;
         try {
             const res = await fetch('/api/categories');
             const cats = await res.json();
-            categoryFilter.innerHTML = '<option value="all">Все товары</option>' + cats.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
+            categoryFilter.innerHTML = '<option value="all">Все товары</option>' + cats.map(c => `<option value="${DFUtil.escapeHtml(c.name)}">${DFUtil.escapeHtml(c.name)}</option>`).join('');
         } catch (e) {
             categoryFilter.innerHTML = '<option value="all">Все товары</option>';
         }
@@ -146,10 +198,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function bindCardEvents() {
-        grid.querySelectorAll('[data-add]').forEach(b => b.addEventListener('click', e => { 
-            e.stopPropagation(); 
-            addToCart(Number(b.dataset.add)); 
-        }));
+        grid.querySelectorAll('[data-add]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); addToCart(Number(b.dataset.add)); }));
         grid.querySelectorAll('[data-fav]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); toggleFav(Number(b.dataset.fav)); }));
         grid.querySelectorAll('[data-quick]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); openQuickView(Number(b.dataset.quick)); }));
     }
@@ -157,7 +206,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (searchInput) searchInput.addEventListener('input', renderProducts);
     if (categoryFilter) categoryFilter.addEventListener('change', renderProducts);
     if (resetFilters) resetFilters.addEventListener('click', () => { searchInput.value = ''; categoryFilter.value = 'all'; renderProducts(); });
+    const noResultsReset = document.getElementById('noResultsReset');
+    if (noResultsReset) noResultsReset.addEventListener('click', () => { searchInput.value = ''; categoryFilter.value = 'all'; renderProducts(); });
 
+    // ===== КОРЗИНА =====
     function addToCart(id) {
         const p = allProducts.find(x => x.id === id);
         if (!p) return;
@@ -172,12 +224,21 @@ document.addEventListener('DOMContentLoaded', () => {
     function removeFromCart(id) { cart = cart.filter(i => i.id !== id); Store.setCart(cart); updateCartUI(); }
     function changeQty(id, delta) { const item = cart.find(i => i.id === id); if (!item) return; item.quantity += delta; if (item.quantity <= 0) { removeFromCart(id); return; } Store.setCart(cart); updateCartUI(); }
 
+    function calcTotals() {
+        const sub = cart.reduce((s, i) => s + i.price * i.quantity, 0);
+        let discount = 0;
+        if (appliedPromo) discount = appliedPromo.type === 'percent' ? Math.round(sub * appliedPromo.value / 100) : Math.min(appliedPromo.value, sub);
+        return { sub, discount, total: Math.max(0, sub - discount) };
+    }
+
     function updateCartUI() {
         if (!cartCount) return;
         const count = cart.reduce((s, i) => s + i.quantity, 0);
         cartCount.textContent = count;
-        if (cart.length === 0) { cartItems.innerHTML = '<div class="empty-cart">Корзина пуста</div>'; if (checkoutBtn) checkoutBtn.disabled = true; }
-        else {
+        if (cart.length === 0) {
+            cartItems.innerHTML = '<div class="empty-cart">Корзина пуста</div>';
+            if (checkoutBtn) checkoutBtn.disabled = true;
+        } else {
             cartItems.innerHTML = cart.map(i => `
                 <div class="cart-item">
                     <img src="${DFUtil.escapeHtml(i.image)}" alt="${DFUtil.escapeHtml(i.name)}">
@@ -198,39 +259,56 @@ document.addEventListener('DOMContentLoaded', () => {
         cartItems.querySelectorAll('[data-remove]').forEach(b => b.addEventListener('click', () => removeFromCart(Number(b.dataset.remove))));
         cartItems.querySelectorAll('[data-qty]').forEach(b => b.addEventListener('click', () => changeQty(Number(b.dataset.qty), Number(b.dataset.delta))));
 
+        const { discount, total } = calcTotals();
         if (totalItems) totalItems.textContent = count;
-        const sub = cart.reduce((s, i) => s + i.price * i.quantity, 0);
-        let discount = 0;
-        if (appliedPromo) { if (appliedPromo.type === 'percent') discount = Math.round(sub * appliedPromo.value / 100); else discount = Math.min(appliedPromo.value, sub); }
         if (totalDiscount) totalDiscount.textContent = DFUtil.formatPrice(discount);
-        if (totalPrice) totalPrice.textContent = DFUtil.formatPrice(Math.max(0, sub - discount));
+        if (totalPrice) totalPrice.textContent = DFUtil.formatPrice(total);
+        if (checkoutTotal) checkoutTotal.textContent = DFUtil.formatPrice(total);
     }
 
     function openCart() { if (cartPanel) cartPanel.classList.add('open'); if (cartOverlay) cartOverlay.classList.add('active'); }
     function closeCart() { if (cartPanel) cartPanel.classList.remove('open'); if (favPanel) favPanel.classList.remove('open'); if (cartOverlay) cartOverlay.classList.remove('active'); }
-    
+
     if (cartBtn) cartBtn.addEventListener('click', openCart);
     if (closeCartBtn) closeCartBtn.addEventListener('click', closeCart);
     if (cartOverlay) cartOverlay.addEventListener('click', closeCart);
 
+    // ===== ПРОМОКОД (проверка на сервере) =====
     if (applyPromoBtn) {
-        applyPromoBtn.addEventListener('click', () => {
+        applyPromoBtn.addEventListener('click', async () => {
             if (!promoInput) return;
-            const code = promoInput.value.trim().toUpperCase();
-            const promos = Store.getPromos();
-            const promo = promos.find(p => p.code.toUpperCase() === code);
-            if (!promo) { promoMessage.textContent = 'Промокод не найден'; promoMessage.className = 'promo-message err'; return; }
-            appliedPromo = promo;
-            updateCartUI();
-            promoMessage.textContent = 'Промокод применён';
-            promoMessage.className = 'promo-message ok';
+            const code = promoInput.value.trim();
+            if (!code) return;
+            const { sub } = calcTotals();
+            try {
+                const res = await fetch('/api/promo/check', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code, subtotal: sub })
+                });
+                const data = await res.json();
+                if (!data.success) {
+                    appliedPromo = null;
+                    promoMessage.textContent = data.error || 'Промокод не найден';
+                    promoMessage.className = 'promo-message err';
+                } else {
+                    appliedPromo = data.promo;
+                    updateCartUI();
+                    promoMessage.textContent = `Промокод применён: −${DFUtil.formatPrice(data.discount)}`;
+                    promoMessage.className = 'promo-message ok';
+                }
+            } catch (e) {
+                promoMessage.textContent = 'Ошибка проверки промокода';
+                promoMessage.className = 'promo-message err';
+            }
         });
     }
 
+    // ===== ИЗБРАННОЕ =====
     function toggleFav(id) {
         const idx = fav.indexOf(id);
         if (idx === -1) { fav.push(id); DFUtil.toast('Добавлено в избранное', 'success', 1800); }
-        else { fav.splice(idx, 1); }
+        else fav.splice(idx, 1);
         Store.setFav(fav);
         updateFavUI();
         renderProducts();
@@ -255,9 +333,10 @@ document.addEventListener('DOMContentLoaded', () => {
         favItems.querySelectorAll('[data-fav-remove]').forEach(b => b.addEventListener('click', () => toggleFav(Number(b.dataset.favRemove))));
     }
 
-    if (favBtn) favBtn.addEventListener('click', () => { if(favPanel) favPanel.classList.add('open'); if(cartOverlay) cartOverlay.classList.add('active'); });
+    if (favBtn) favBtn.addEventListener('click', () => { if (favPanel) favPanel.classList.add('open'); if (cartOverlay) cartOverlay.classList.add('active'); });
     if (closeFavBtn) closeFavBtn.addEventListener('click', closeCart);
 
+    // ===== БЫСТРЫЙ ПРОСМОТР =====
     function openQuickView(id) {
         const p = allProducts.find(x => x.id === id);
         if (!p || !quickViewBody) return;
@@ -280,64 +359,171 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (closeQuickView) closeQuickView.addEventListener('click', () => quickViewModal.classList.remove('open'));
 
-    if (checkoutBtn) checkoutBtn.addEventListener('click', () => { if (cart.length === 0) return; closeCart(); checkoutModal.classList.add('open'); });
+    // ===== ОФОРМЛЕНИЕ ЗАКАЗА =====
+    if (checkoutBtn) checkoutBtn.addEventListener('click', () => {
+        if (cart.length === 0) return;
+        // Подставляем данные из профиля
+        const u = Auth.current();
+        if (u) {
+            const nameField = checkoutForm.querySelector('[name=name]');
+            const phoneField = checkoutForm.querySelector('[name=phone]');
+            const emailField = checkoutForm.querySelector('[name=email]');
+            if (nameField && !nameField.value) nameField.value = u.name || '';
+            if (phoneField && !phoneField.value) phoneField.value = u.phone || '';
+            if (emailField && !emailField.value) emailField.value = u.email || '';
+        }
+        closeCart();
+        checkoutModal.classList.add('open');
+    });
     if (closeCheckout) closeCheckout.addEventListener('click', () => checkoutModal.classList.remove('open'));
 
+    // Переключение «пункт выдачи / адрес»
+    if (deliveryType) deliveryType.addEventListener('change', () => {
+        const isPickup = deliveryType.value === 'pickup';
+        pickupRow.style.display = isPickup ? 'block' : 'none';
+        addressRow.style.display = isPickup ? 'none' : 'block';
+        if (!isPickup) addressInput.required = true; else addressInput.required = false;
+    });
 
+    // ===== ВЫБОР ПУНКТА ВЫДАЧИ =====
+    async function loadPickupPoints() {
+        try {
+            pickupPoints = await (await fetch('/api/pickup')).json();
+        } catch (e) { pickupPoints = []; }
+        renderPickupList();
+    }
+
+    function renderPickupList() {
+        if (!pickupPointsList) return;
+        const q = pickupSearch ? pickupSearch.value.trim().toLowerCase() : '';
+        const list = pickupPoints.filter(p => ((p.city || '') + ' ' + (p.address || '') + ' ' + (p.name || '')).toLowerCase().includes(q));
+        if (list.length === 0) { pickupPointsList.innerHTML = '<div class="list-empty">Пункты выдачи не найдены</div>'; return; }
+        pickupPointsList.innerHTML = list.map(p => `
+            <div class="list-item" style="padding:12px 14px;">
+                <div class="list-item-info">
+                    <h4>${DFUtil.escapeHtml(p.city || '')} · ${DFUtil.escapeHtml(p.name || 'Пункт выдачи СДЭК')}</h4>
+                    <p>${DFUtil.escapeHtml(p.address)}</p>
+                </div>
+                <div class="list-actions">
+                    <button class="btn-ghost" data-pick="${p.id}">Выбрать</button>
+                </div>
+            </div>
+        `).join('');
+        pickupPointsList.querySelectorAll('[data-pick]').forEach(b => b.addEventListener('click', () => {
+            selectedPickup = pickupPoints.find(p => p.id === Number(b.dataset.pick));
+            document.getElementById('pickupIdInput').value = selectedPickup.id;
+            document.getElementById('pickupSelected').textContent = `Выбрано: ${selectedPickup.city || ''}, ${selectedPickup.address}`;
+            pickupModal.classList.remove('open');
+        }));
+    }
+
+    if (pickPickupBtn) pickPickupBtn.addEventListener('click', async () => {
+        pickupModal.classList.add('open');
+        await loadPickupPoints();
+        // Показываем карту по первой точке с координатами
+        const withCoords = pickupPoints.find(p => p.lat && p.lng);
+        if (withCoords) {
+            pickupMapWrap.style.display = 'block';
+            pickupMap.src = `https://yandex.ru/map-widget/v1/?ll=${withCoords.lng}%2C${withCoords.lat}&z=12&pt=${withCoords.lng},${withCoords.lat},pm2rdm`;
+        } else {
+            pickupMapWrap.style.display = 'none';
+        }
+    });
+    if (pickupSearch) pickupSearch.addEventListener('input', renderPickupList);
+    document.querySelectorAll('[data-close]').forEach(btn => btn.addEventListener('click', () => document.getElementById(btn.dataset.close).classList.remove('open')));
+
+    // ===== ОПЛАТА: создать заказ, потом платёж ЮKassa =====
     if (payBtn) {
         payBtn.addEventListener('click', async () => {
             if (!checkoutForm.checkValidity()) { checkoutForm.reportValidity(); return; }
-            
-            const sub = cart.reduce((s, i) => s + i.price * i.quantity, 0);
-            let discount = 0;
-            if (appliedPromo) discount = appliedPromo.type === 'percent' ? Math.round(sub * appliedPromo.value / 100) : Math.min(appliedPromo.value, sub);
-            const total = Math.max(0, sub - discount);
+            const isPickup = !deliveryType || deliveryType.value === 'pickup';
+            if (isPickup && !selectedPickup) { DFUtil.toast('Выберите пункт выдачи', 'warning'); return; }
+            if (!isPickup && !addressInput.value.trim()) { DFUtil.toast('Укажите адрес доставки', 'warning'); return; }
+
+            const { total } = calcTotals();
+            if (total < 1) { DFUtil.toast('Сумма заказа некорректна', 'error'); return; }
+
+            const fd = new FormData(checkoutForm);
+            const address = isPickup
+                ? `ПВЗ СДЭК: ${selectedPickup.city || ''}, ${selectedPickup.address} (ID ${selectedPickup.id})`
+                : addressInput.value.trim();
+
+            payBtn.disabled = true;
+            payBtn.textContent = 'Создаём заказ...';
 
             try {
-                // Отправляем запрос на сервер для создания платежа
-                const response = await fetch('/api/pay', {
+                // 1. Сохраняем заказ
+                const orderRes = await fetch('/api/order', {
+                    method: 'POST',
+                    headers: Object.assign({ 'Content-Type': 'application/json' }, Store.authHeaders()),
+                    body: JSON.stringify({
+                        name: fd.get('name'),
+                        phone: fd.get('phone'),
+                        email: fd.get('email'),
+                        address,
+                        comment: fd.get('comment') || '',
+                        items: cart,
+                        total
+                    })
+                });
+                const orderData = await orderRes.json();
+                if (!orderData.success) {
+                    DFUtil.toast(orderData.error || 'Ошибка оформления заказа', 'error');
+                    payBtn.disabled = false;
+                    payBtn.textContent = 'Перейти к оплате';
+                    return;
+                }
+                lastOrderId = orderData.orderId;
+
+                // 2. Создаём платёж
+                payBtn.textContent = 'Открываем оплату...';
+                const payRes = await fetch('/api/pay', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ amount: total, orderId: Date.now() }) // orderId можно заменить на реальный ID заказа
+                    body: JSON.stringify({ orderId: lastOrderId })
                 });
-                const data = await response.json();
-
-                if (data.success && data.confirmation_url) {
-                    // Перенаправляем на страницу оплаты ЮKassa
-                    window.location.href = data.confirmation_url;
+                const payData = await payRes.json();
+                if (payData.success && payData.confirmation_url) {
+                    window.location.href = payData.confirmation_url;
                 } else {
-                    alert('Ошибка при создании платежа. Попробуйте позже.');
+                    DFUtil.toast(payData.error || 'Ошибка создания платежа', 'error');
+                    payBtn.disabled = false;
+                    payBtn.textContent = 'Перейти к оплате';
                 }
             } catch (e) {
                 console.error('Ошибка:', e);
-                alert('Не удалось связаться с сервером.');
+                DFUtil.toast('Не удалось связаться с сервером', 'error');
+                payBtn.disabled = false;
+                payBtn.textContent = 'Перейти к оплате';
             }
         });
     }
+
+    // ===== СТРАНИЦЫ ИЗ ПОДВАЛА / ФОРМ =====
+    function openPage(key) {
+        let html = Store.getPages()[key] || '<p>Страница не найдена</p>';
+        if (key === 'contacts') {
+            const s = Store.getSettings();
+            html = `<h2>Контакты</h2><p><b>Компания:</b> ${DFUtil.escapeHtml(s.legalName || '')}</p><p><b>ИНН:</b> ${DFUtil.escapeHtml(s.inn || '')}</p><p><b>Email:</b> ${DFUtil.escapeHtml(s.email || '')}</p><p><b>Телефон:</b> ${DFUtil.escapeHtml(s.phone || '')}</p><p><b>Адрес:</b> ${DFUtil.escapeHtml(s.address || '')}</p>`;
+        }
+        pageBody.innerHTML = html;
+        pageModal.classList.add('open');
+        pageBody.querySelectorAll('.faq-q').forEach(btn => btn.addEventListener('click', () => btn.parentElement.classList.toggle('open')));
+    }
+
     document.querySelectorAll('[data-page]').forEach(link => {
         link.addEventListener('click', e => {
             e.preventDefault();
-            const key = link.dataset.page;
-            const pages = Store.getPages();
-            let html = '';
-            if (key === 'contacts') {
-                const s = Store.getSettings();
-                html = `<h2>Контакты</h2><p><b>Email:</b> ${s.email}</p><p><b>Телефон:</b> ${s.phone}</p><p><b>Адрес:</b> ${s.address}</p>`;
-            } else if (key === 'faq') {
-                html = `<h2>Часто спрашивают</h2><div class="faq-list">
-                    <div class="faq-item"><button class="faq-q">Как оформить заказ?</button><div class="faq-a">Добавьте товары в корзину...</div></div>
-                    <div class="faq-item"><button class="faq-q">Сколько стоит доставка?</button><div class="faq-a">Доставка по России через СДЭК — от 350 ₽.</div></div>
-                </div>`;
-            } else {
-                html = pages[key] || '<p>Страница не найдена</p>';
-            }
-            pageBody.innerHTML = html;
-            pageModal.classList.add('open');
-            pageBody.querySelectorAll('.faq-q').forEach(btn => btn.addEventListener('click', () => btn.parentElement.classList.toggle('open')));
+            openPage(link.dataset.page);
         });
     });
     if (closePage) closePage.addEventListener('click', () => pageModal.classList.remove('open'));
 
+    function renderStaticPages() {
+        // наполнение страниц по умолчанию — делает админка, тут ничего дополнительно не нужно
+    }
+
+    // ===== ЛИЧНЫЙ КАБИНЕТ =====
     function updateAuthUI() {
         if (!authBtn) return;
         if (Auth.isLoggedIn()) {
@@ -360,33 +546,98 @@ document.addEventListener('DOMContentLoaded', () => {
                 const target = tab.dataset.profileTab;
                 document.querySelectorAll('.profile-tab-content').forEach(c => c.style.display = 'none');
                 document.getElementById('profile' + target.charAt(0).toUpperCase() + target.slice(1)).style.display = 'block';
+                if (target === 'review') fillReviewProducts();
             });
         });
         if (logoutFromProfile) logoutFromProfile.addEventListener('click', () => { Auth.logout(); window.location.href = 'index.html'; });
+
+        if (reviewSubmit) reviewSubmit.addEventListener('click', async () => {
+            if (!Auth.isLoggedIn()) { DFUtil.toast('Войдите, чтобы оставить отзыв', 'warning'); return; }
+            if (!reviewText.value.trim() || reviewText.value.trim().length < 3) { DFUtil.toast('Напишите текст отзыва', 'warning'); return; }
+            try {
+                const res = await fetch('/api/comments', {
+                    method: 'POST',
+                    headers: Object.assign({ 'Content-Type': 'application/json' }, Store.authHeaders()),
+                    body: JSON.stringify({ productId: Number(reviewProduct.value) || null, text: reviewText.value.trim() })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    reviewText.value = '';
+                    DFUtil.toast(data.message || 'Отзыв отправлен на проверку', 'success');
+                } else DFUtil.toast(data.error || 'Ошибка отправки', 'error');
+            } catch (e) { DFUtil.toast('Не удалось связаться с сервером', 'error'); }
+        });
+    }
+
+    function fillReviewProducts() {
+        if (!reviewProduct) return;
+        reviewProduct.innerHTML = allProducts.map(p => `<option value="${p.id}">${DFUtil.escapeHtml(p.name)}</option>`).join('');
     }
 
     async function loadProfileData() {
         const user = Auth.current();
         if (!user) return;
+
+        // Данные профиля
+        const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
+        set('profName', user.name);
+        set('profLogin', user.login);
+        set('profEmail', user.email);
+        set('profPhone', user.phone);
+
+        // Мои заказы — только этого пользователя (по токену)
         const ordersList = document.getElementById('myOrdersList');
         ordersList.innerHTML = '<p>Загрузка...</p>';
         try {
-            const res = await fetch('/api/orders');
-            const allOrders = await res.json();
-            const myOrders = allOrders.filter(o => o.name.toLowerCase().includes(user.name.toLowerCase()));
-            ordersList.innerHTML = myOrders.map(o => `<div class="list-item">Заказ №${o.id} | ${DFUtil.formatPrice(o.total)}</div>`).join('') || '<p>Нет заказов</p>';
+            const res = await fetch('/api/orders/my', { headers: Store.authHeaders() });
+            if (res.status === 401) { Auth.logout(); updateAuthUI(); ordersList.innerHTML = '<p>Войдите заново</p>'; return; }
+            const myOrders = await res.json();
+            const payLabels = { 'pending': '⏳ Не оплачен', 'paid': '✅ Оплачен', 'canceled': '❌ Отменён' };
+            const statusLabels = { 'active': 'Оформлен', 'shipped': 'Передан в доставку', 'delivering': 'Доставляется', 'arrived': 'Приехал', 'done': 'Завершён', 'canceled': 'Отменён' };
+            ordersList.innerHTML = myOrders.length === 0 ? '<p>Заказов пока нет</p>' : myOrders.map(o => `
+                <div class="list-item">
+                    <div class="list-item-info">
+                        <h4>Заказ №${o.id} · ${DFUtil.formatPrice(o.total)}</h4>
+                        <p>${statusLabels[o.status] || o.status} · ${payLabels[o.payment_status] || ''}</p>
+                    </div>
+                </div>
+            `).join('');
         } catch (e) {
             ordersList.innerHTML = '<p>Ошибка загрузки</p>';
         }
     }
 
+    // ===== ПРОЧЕЕ =====
+    function startTypewriter() {
+        const heroTitle = document.getElementById('heroTitle');
+        if (!heroTitle) return;
+        const text = 'DROPFLOW';
+        let i = 0;
+        heroTitle.textContent = '';
+        const timer = setInterval(() => {
+            heroTitle.textContent = text.slice(0, ++i);
+            if (i >= text.length) clearInterval(timer);
+        }, 90);
+    }
+
+    if (toTop) toTop.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+
+    // Бургер-меню
+    const burgerBtn = document.getElementById('burgerBtn');
+    const mobileMenu = document.getElementById('mobileMenu');
+    if (burgerBtn && mobileMenu) {
+        burgerBtn.addEventListener('click', () => mobileMenu.classList.toggle('open'));
+        mobileMenu.querySelectorAll('a').forEach(a => a.addEventListener('click', () => mobileMenu.classList.remove('open')));
+    }
+
     document.addEventListener('keydown', e => {
-        if (e.key === 'Escape') { 
-            if(quickViewModal) quickViewModal.classList.remove('open'); 
-            if(checkoutModal) checkoutModal.classList.remove('open'); 
-            if(pageModal) pageModal.classList.remove('open'); 
-            if(profileModal) profileModal.classList.remove('open');
-            closeCart(); 
+        if (e.key === 'Escape') {
+            if (quickViewModal) quickViewModal.classList.remove('open');
+            if (checkoutModal) checkoutModal.classList.remove('open');
+            if (pageModal) pageModal.classList.remove('open');
+            if (profileModal) profileModal.classList.remove('open');
+            if (pickupModal) pickupModal.classList.remove('open');
+            closeCart();
         }
     });
 });

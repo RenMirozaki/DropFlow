@@ -3,173 +3,258 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DropFlow — магазин качественных товаров</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <title>DropFlow — интернет-магазин</title>
     <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600&display=swap" rel="stylesheet">
 </head>
 <body>
 
-    <header class="header">
-        <div class="header-inner">
-            <!-- Бургер-кнопка (П. 4) -->
-            <button id="burgerBtn" class="burger-btn">☰</button>
-
-            <a href="index.html" class="logo">
-                <svg class="logo-icon" viewBox="0 0 48 48" width="42" height="42">
-                    <defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#e8b06a"/><stop offset="100%" stop-color="#7eb8f0"/></linearGradient></defs>
-                    <path d="M24 4 L42 14 V34 L24 44 L6 34 V14 Z" fill="none" stroke="url(#lg)" stroke-width="2"/>
-                    <path d="M16 18 H26 a6 6 0 0 1 0 12 H16 Z" fill="none" stroke="url(#lg)" stroke-width="2.5"/>
-                    <circle cx="34" cy="34" r="3" fill="#e8b06a"/>
-                </svg>
-                <span class="logo-text"><b>DROPFLOW</b><i>ONLINE STORE</i></span>
-            </a>
-
-            <nav class="nav">
-                <a href="#catalog">Каталог</a>
-                <a href="#" data-page="about">О нас</a>
-                <a href="#" data-page="faq">Вопросы</a>
-                <a href="#" data-page="contacts">Контакты</a>
-            </nav>
-
-            <div class="header-actions">
-                <button id="authBtn" class="btn-ghost" style="cursor: pointer;">
-                    <span class="icon">👤</span> <span id="authBtnText">Войти</span>
-                </button>
-                <button id="favBtn" class="btn-ghost"><span class="icon">♥</span> <span id="favCount" class="badge">0</span></button>
-                <button id="cartBtn" class="btn-accent"><span class="icon">🛒</span> <span id="cartCount" class="badge badge-dark">0</span></button>
-            </div>
-        </div>
-    </header>
-
-    <!-- Мобильное меню -->
-    <div id="mobileMenu" class="mobile-menu">
-        <a href="#catalog">Каталог</a>
-        <a href="#" data-page="about">О нас</a>
-        <a href="#" data-page="faq">Вопросы</a>
-        <a href="#" data-page="contacts">Контакты</a>
-    </div>
-
-    <section class="hero">
-        <div class="hero-overlay"></div>
-        <div class="hero-content">
-            <h1>Вещи, которые<br>делают жизнь <span id="typewriter" class="typewriter">уютнее</span></h1>
-            <p>Отобранные вручную предметы интерьера, электроника и аксессуары от проверенных поставщиков.</p>
-        </div>
-    </section>
-
-    <section class="catalog" id="catalog">
-        <div class="container">
-            <!-- Баннер (П. 2) -->
-            <div id="catalogBanner" class="catalog-banner">
-                <!-- Сюда рендерится баннер из app.js -->
-            </div>
-
-            <div class="section-head"><div><h2 class="section-title" style="font-size: 4rem; margin-bottom: 20px;">Каталог</h2></div></div>
-            
-            <div class="filters">
-                <input type="text" id="searchInput" class="input" placeholder="🔍 Поиск по названию...">
-                <select id="categoryFilter" class="input select"><option value="all">Все товары</option></select>
-            </div>
-            <div id="productsGrid" class="products-grid"></div>
-            <div id="noResults" class="no-results" hidden><p>😔 Ничего не найдено</p><button id="resetFilters" class="btn-ghost">Сбросить фильтры</button></div>
-        </div>
-    </section>
-
-    <!-- Модалка для страниц -->
-    <div id="pageModal" class="modal">
-        <div class="modal-decor-wrapper">
-            <div class="modal-content">
-                <button id="closePage" class="close-btn">&times;</button>
-                <div id="pageBody"></div>
-            </div>
+<!-- ===== ШАПКА ===== -->
+<header class="header">
+    <div class="header-inner">
+        <a href="index.html" class="logo">
+            <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+                <rect x="1" y="1" width="34" height="34" stroke="#e8b06a" stroke-width="2"/>
+                <path d="M10 22 L18 10 L26 22 Z" fill="#e8b06a"/>
+            </svg>
+            <span class="logo-text"><b>DROPFLOW</b><i>ONLINE STORE</i></span>
+        </a>
+        <nav class="nav">
+            <a href="#catalog">Каталог</a>
+            <a href="#about">О нас</a>
+            <a href="#" data-page="contacts">Контакты</a>
+        </nav>
+        <div class="header-actions">
+            <button class="btn-ghost" id="favBtn"><span class="icon">♡</span><span class="badge" id="favCount">0</span></button>
+            <button class="btn-ghost" id="cartBtn"><span class="icon">🛒</span><span class="badge" id="cartCount">0</span></button>
+            <button class="btn-ghost" id="authBtn"><span id="authBtnText">Войти</span></button>
+            <button class="burger-btn" id="burgerBtn">☰</button>
         </div>
     </div>
+</header>
 
-    <!-- Корзина -->
-    <div id="cartOverlay" class="overlay"></div>
-    <aside id="cartPanel" class="cart-panel">
-        <div class="panel-header"><h2>Корзина</h2><button id="closeCartBtn" class="close-btn">&times;</button></div>
-        <div class="cart-body">
-            <div id="cartItems" class="cart-items"></div>
-            <div id="cartPromo" class="cart-promo"><input type="text" id="promoInput" class="input" placeholder="Промокод"><button id="applyPromoBtn" class="btn-ghost">Применить</button></div>
-            <div id="promoMessage" class="promo-message"></div>
-        </div>
-        <div class="panel-footer">
-            <div class="cart-summary"><div><span>Товаров:</span> <b id="totalItems">0</b></div><div><span>Скидка:</span> <b id="totalDiscount">0 ₽</b></div><div class="cart-total"><span>Итого:</span> <b id="totalPrice">0 ₽</b></div></div>
-            <button id="checkoutBtn" class="btn-accent full" disabled>Оформить заказ</button>
-        </div>
-    </aside>
+<!-- ===== МОБИЛЬНОЕ МЕНЮ ===== -->
+<div class="mobile-menu" id="mobileMenu">
+    <a href="#catalog">Каталог</a>
+    <a href="#about">О нас</a>
+    <a href="#" data-page="contacts">Контакты</a>
+</div>
 
-    <!-- Избранное -->
-    <aside id="favPanel" class="cart-panel">
-        <div class="panel-header"><h2>Избранное</h2><button id="closeFavBtn" class="close-btn">&times;</button></div>
-        <div class="cart-body"><div id="favItems" class="cart-items"></div></div>
-    </aside>
-
-    <!-- Быстрый просмотр -->
-    <div id="quickViewModal" class="modal"><div class="modal-content"><button id="closeQuickView" class="close-btn">&times;</button><div id="quickViewBody"></div></div></div>
-    
-    <!-- Оформление заказа -->
-    <div id="checkoutModal" class="modal">
-        <div class="modal-content">
-            <button id="closeCheckout" class="close-btn">&times;</button>
-            <h2 class="modal-title">Оформление заказа</h2>
-            <form id="checkoutForm" class="form">
-                <div class="form-row"><label>ФИО *</label><input type="text" name="name" class="input" placeholder="Иванов Иван Иванович" required></div>
-                <div class="form-row"><label>Телефон *</label><input type="tel" name="phone" class="input" placeholder="+7 (___) ___-__-__" required></div>
-                <div class="form-row"><label>Email</label><input type="email" name="email" class="input"></div>
-                <div class="form-row"><label>Адрес доставки *</label><textarea name="address" class="input" rows="3" required></textarea></div>
-                <div class="form-row"><label>Комментарий</label><textarea name="comment" class="input" rows="2"></textarea></div>
-                <div class="form-row checkbox-row" style="margin-top: 15px;">
-                    <label class="checkbox">
-                        <input type="checkbox" name="agreement" required>
-                        <span>Я согласен с <a href="#" data-page="offer">условиями оферты</a> и <a href="#" data-page="privacy">политикой конфиденциальности</a>, а также с получением электронного чека в соответствии с НПД.</span>
-                    </label>
-                </div>
-                <button type="button" id="payBtn" class="btn-accent full big" style="margin-top: 10px;">💳 Оплатить онлайн</button>
-            </form>
+<!-- ===== HERO ===== -->
+<section class="hero" id="hero">
+    <div class="hero-overlay"></div>
+    <div class="hero-content">
+        <h1 id="heroTitle">DROPFLOW</h1>
+        <p>Магазин отобранных вручную вещей. Доставка по России через СДЭК.</p>
+        <div class="hero-buttons">
+            <a href="#catalog" class="btn-accent big">В каталог</a>
+            <a href="#about" class="btn-ghost big">О нас</a>
         </div>
     </div>
+</section>
 
-    <!-- Модалка профиля -->
-    <div id="profileModal" class="modal">
-        <div class="modal-content">
-            <button id="closeProfile" class="close-btn">&times;</button>
-            <h2 class="modal-title" style="margin-bottom: 20px;">Личный кабинет</h2>
-            <div class="tabs" style="margin-bottom: 20px;">
-                <button class="tab active" data-profile-tab="orders">Мои заказы</button>
-                <button class="tab" data-profile-tab="fav">Избранное</button>
-                <button class="tab" data-profile-tab="cart">Корзина</button>
+<!-- ===== КАТАЛОГ ===== -->
+<section class="catalog" id="catalog">
+    <div class="container">
+        <div class="section-head">
+            <div>
+                <span class="section-label">КАТАЛОГ</span>
+                <h2 class="section-title">Наши товары</h2>
             </div>
-            <div id="profileOrders" class="profile-tab-content active"><div id="myOrdersList" style="display: flex; flex-direction: column; gap: 15px;"><p style="color: var(--text-3);">Загрузка...</p></div></div>
-            <div id="profileFav" class="profile-tab-content" style="display: none;"><div id="profileFavItems" class="cart-items"></div></div>
-            <div id="profileCart" class="profile-tab-content" style="display: none;"><div id="profileCartItems" class="cart-items"></div></div>
-            <button id="logoutFromProfile" class="btn-ghost full" style="margin-top: 20px;">Выйти из аккаунта</button>
+        </div>
+
+        <!-- Баннер-реклама (картинка из админки) -->
+        <div id="catalogBanner"></div>
+
+        <div class="filters">
+            <input type="text" id="searchInput" class="input" placeholder="Поиск по названию или описанию...">
+            <select id="categoryFilter" class="input select">
+                <option value="all">Все товары</option>
+            </select>
+            <button class="btn-ghost" id="resetFilters">Сбросить</button>
+        </div>
+
+        <div class="products-grid" id="productsGrid"></div>
+        <div class="no-results" id="noResults" hidden>
+            <p>Ничего не найдено</p>
+            <button class="btn-ghost" id="noResultsReset">Сбросить фильтры</button>
         </div>
     </div>
+</section>
 
-    <div id="toastBox" class="toast-box"></div>
+<!-- ===== О НАС ===== -->
+<section id="about">
+    <div class="container">
+        <div class="section-head center">
+            <div>
+                <span class="section-label">О НАС</span>
+                <h2 class="section-title center">DropFlow</h2>
+            </div>
+        </div>
+        <div id="aboutContent" class="container narrow" style="text-align:center; color:var(--text-2);"></div>
+    </div>
+</section>
 
-    <script src="js/data.js"></script>
-    <script src="js/auth.js"></script>
-    <script src="js/app.js"></script>
-    <script>
-        // Логика бургер-меню
-        const burgerBtn = document.getElementById('burgerBtn');
-        const mobileMenu = document.getElementById('mobileMenu');
-        if (burgerBtn && mobileMenu) {
-            burgerBtn.addEventListener('click', () => {
-                mobileMenu.classList.toggle('open');
-            });
-            // Закрываем меню при клике на ссылку
-            mobileMenu.querySelectorAll('a').forEach(link => {
-                link.addEventListener('click', () => {
-                    mobileMenu.classList.remove('open');
-                });
-            });
-        }
-    </script>
+<!-- ===== ПОДВАЛ ===== -->
+<footer style="border-top:1px solid var(--border); padding:40px 0; margin-top:40px;">
+    <div class="container" style="display:flex; justify-content:space-between; gap:20px; flex-wrap:wrap; font-size:13px; color:var(--text-2);">
+        <div>
+            <b style="color:#fff; letter-spacing:0.15em;">DROPFLOW</b>
+            <p style="margin-top:8px;" id="footerContacts"></p>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:8px;">
+            <a href="#" data-page="about">О нас</a>
+            <a href="#" data-page="delivery">Доставка и оплата</a>
+            <a href="#" data-page="faq">Часто спрашивают</a>
+            <a href="#" data-page="contacts">Контакты</a>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:8px;">
+            <a href="#" data-page="offer">Публичная оферта</a>
+            <a href="#" data-page="privacy">Политика конфиденциальности</a>
+            <a href="#" data-page="personal-data">Обработка персональных данных</a>
+        </div>
+    </div>
+</footer>
+
+<button id="toTop" class="btn-ghost" style="position:fixed; bottom:26px; right:26px; z-index:90; width:46px; height:46px; padding:0;">↑</button>
+
+<!-- ===== КОРЗИНА ===== -->
+<div class="overlay" id="cartOverlay"></div>
+<aside class="cart-panel" id="cartPanel">
+    <div class="panel-header">
+        <h2>Корзина</h2>
+        <button class="close-btn" id="closeCartBtn">×</button>
+    </div>
+    <div class="cart-body">
+        <div class="cart-items" id="cartItems"></div>
+        <div class="cart-promo">
+            <input type="text" id="promoInput" class="input" placeholder="Промокод">
+            <button class="btn-ghost" id="applyPromoBtn">ОК</button>
+        </div>
+        <div class="promo-message" id="promoMessage"></div>
+    </div>
+    <div class="panel-footer">
+        <div class="cart-summary">
+            <div><span>Товаров:</span><b id="totalItems">0</b></div>
+            <div><span>Скидка:</span><b id="totalDiscount">0 ₽</b></div>
+            <div class="cart-total"><span>Итого:</span><b id="totalPrice">0 ₽</b></div>
+        </div>
+        <button class="btn-accent full" id="checkoutBtn" disabled>Оформить заказ</button>
+    </div>
+</aside>
+
+<!-- ===== ИЗБРАННОЕ ===== -->
+<aside class="cart-panel" id="favPanel">
+    <div class="panel-header">
+        <h2>Избранное</h2>
+        <button class="close-btn" id="closeFavBtn">×</button>
+    </div>
+    <div class="cart-body">
+        <div class="cart-items" id="favItems"></div>
+    </div>
+</aside>
+
+<!-- ===== МОДАЛКА: ОФОРМЛЕНИЕ ЗАКАЗА ===== -->
+<div id="checkoutModal" class="modal">
+    <div class="modal-content">
+        <button class="close-btn" id="closeCheckout">×</button>
+        <h2 class="modal-title">Оформление заказа</h2>
+        <form id="checkoutForm" class="form">
+            <div class="form-row"><label>ФИО *</label><input type="text" name="name" class="input" required placeholder="Иванов Иван Иванович"></div>
+            <div class="form-grid-2">
+                <div class="form-row"><label>Телефон *</label><input type="tel" name="phone" class="input" required placeholder="+7 (___) ___-__-__"></div>
+                <div class="form-row"><label>Email</label><input type="email" name="email" class="input" placeholder="you@mail.ru"></div>
+            </div>
+            <div class="form-row"><label>Способ получения *</label>
+                <select name="deliveryType" id="deliveryType" class="input select">
+                    <option value="pickup">Пункт выдачи СДЭК</option>
+                    <option value="courier">Курьер / почтой по адресу</option>
+                </select>
+            </div>
+            <div class="form-row" id="pickupRow">
+                <label>Пункт выдачи *</label>
+                <input type="hidden" name="pickupId" id="pickupIdInput">
+                <button type="button" class="btn-ghost full" id="pickPickupBtn">📍 Выбрать пункт выдачи</button>
+                <div id="pickupSelected" style="font-size:13px; color:var(--success); margin-top:8px;"></div>
+            </div>
+            <div class="form-row" id="addressRow" style="display:none;"><label>Адрес доставки *</label><input type="text" name="address" id="addressInput" class="input" placeholder="Город, улица, дом, квартира"></div>
+            <div class="form-row"><label>Комментарий</label><textarea name="comment" class="input" rows="2"></textarea></div>
+            <div class="checkbox-row">
+                <label class="checkbox"><input type="checkbox" required>
+                    <span>Согласен с <a href="#" data-page="offer" style="color:var(--accent); text-decoration:underline;">офертой</a>, <a href="#" data-page="privacy" style="color:var(--accent); text-decoration:underline;">политикой конфиденциальности</a> и <a href="#" data-page="personal-data" style="color:var(--accent); text-decoration:underline;">обработкой персональных данных</a></span>
+                </label>
+            </div>
+            <div class="cart-total" style="margin:16px 0;"><span>К оплате:</span><b id="checkoutTotal">0 ₽</b></div>
+            <button type="button" class="btn-accent big full" id="payBtn">Перейти к оплате</button>
+        </form>
+    </div>
+</div>
+
+<!-- ===== МОДАЛКА: ВЫБОР ПУНКТА ВЫДАЧИ ===== -->
+<div id="pickupModal" class="modal">
+    <div class="modal-content">
+        <button class="close-btn" data-close="pickupModal">×</button>
+        <h2 class="modal-title">Пункты выдачи СДЭК</h2>
+        <input type="text" id="pickupSearch" class="input" placeholder="Поиск по городу или адресу..." style="margin-bottom:14px;">
+        <div id="pickupMapWrap" style="border:1px solid var(--border); margin-bottom:14px; display:none;">
+            <iframe id="pickupMap" style="width:100%; height:260px; border:0;" loading="lazy"></iframe>
+        </div>
+        <div id="pickupPointsList" style="max-height:320px; overflow-y:auto;"></div>
+    </div>
+</div>
+
+<!-- ===== МОДАЛКА: БЫСТРЫЙ ПРОСМОТР ===== -->
+<div id="quickViewModal" class="modal">
+    <div class="modal-content">
+        <button class="close-btn" id="closeQuickView">×</button>
+        <div id="quickViewBody"></div>
+    </div>
+</div>
+
+<!-- ===== МОДАЛКА: СТРАНИЦА (оферта, политика и т.д.) ===== -->
+<div id="pageModal" class="modal">
+    <div class="modal-content">
+        <button class="close-btn" id="closePage">×</button>
+        <div id="pageBody"></div>
+    </div>
+</div>
+
+<!-- ===== МОДАЛКА: ЛИЧНЫЙ КАБИНЕТ ===== -->
+<div id="profileModal" class="modal">
+    <div class="modal-content">
+        <button class="close-btn" id="closeProfile">×</button>
+        <h2 class="modal-title">Личный кабинет</h2>
+        <div class="tabs">
+            <button class="tab active" data-profile-tab="orders">Мои заказы</button>
+            <button class="tab" data-profile-tab="data">Мои данные</button>
+            <button class="tab" data-profile-tab="review">Отзыв</button>
+        </div>
+
+        <div id="profileOrders" class="profile-tab-content" style="display:block;">
+            <div id="myOrdersList"><p>Загрузка...</p></div>
+        </div>
+
+        <div id="profileData" class="profile-tab-content" style="display:none;">
+            <div class="form-row"><label>ФИО</label><input type="text" id="profName" class="input" disabled></div>
+            <div class="form-row"><label>Логин</label><input type="text" id="profLogin" class="input" disabled></div>
+            <div class="form-row"><label>Email</label><input type="text" id="profEmail" class="input" disabled></div>
+            <div class="form-row"><label>Телефон</label><input type="text" id="profPhone" class="input" disabled></div>
+            <button class="btn-ghost" id="logoutFromProfile">Выйти из аккаунта</button>
+        </div>
+
+        <div id="profileReview" class="profile-tab-content" style="display:none;">
+            <p style="color:var(--text-2); font-size:13px; margin-bottom:12px;">Отзыв появится на сайте после проверки администратором.</p>
+            <div class="form-row"><label>Товар</label><select id="reviewProduct" class="input select"></select></div>
+            <div class="form-row"><label>Ваш отзыв</label><textarea id="reviewText" class="input" rows="4" maxlength="1000" placeholder="Напишите пару слов о товаре..."></textarea></div>
+            <button class="btn-accent" id="reviewSubmit">Отправить отзыв</button>
+        </div>
+    </div>
+</div>
+
+<div class="toast-box" id="toastBox"></div>
+
+<script src="js/data.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/app.js"></script>
 </body>
 </html>

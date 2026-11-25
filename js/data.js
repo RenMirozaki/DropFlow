@@ -1,9 +1,6 @@
+// data.js — DropFlow (фронтенд-хранилище)
 const DF = {
     KEYS: {
-        settings: 'df_settings',
-        users: 'df_users',
-        orders: 'df_orders',
-        promos: 'df_promos',
         cart: 'df_cart',
         fav: 'df_fav',
         session: 'df_session',
@@ -14,8 +11,10 @@ const DF = {
 const DF_DEFAULT_PAGES = {
     about: `<h2>О компании DropFlow</h2><p>DropFlow — это магазин, где каждая вещь отобрана вручную...</p>`,
     privacy: `<h2>Политика конфиденциальности</h2><p>...</p>`,
-    'personal-data': `<h2>Согласие на обработку...</h2><p>...</p>`,
-    offer: `<h2>Публичная оферта</h2><p>...</p>`
+    'personal-data': `<h2>Согласие на обработку персональных данных</h2><p>...</p>`,
+    offer: `<h2>Публичная оферта</h2><p>...</p>`,
+    faq: `<h2>Часто спрашивают</h2><p>...</p>`,
+    contacts: `<h2>Контакты</h2><p>...</p>`
 };
 
 const DF_DEFAULT_SETTINGS = {
@@ -29,17 +28,8 @@ const DF_DEFAULT_SETTINGS = {
     inn: '290223956586'
 };
 
-const DF_DEFAULT_PROMOS = [
-    { code: 'WELCOME10', type: 'percent', value: 10, minTotal: 0 },
-    { code: 'FLOW500', type: 'fixed', value: 500, minTotal: 3000 }
-];
-
-const DF_DEFAULT_USERS = [
-    { login: 'admin', password: '12345', name: 'Администратор', email: 'admin@dropflow.ru', phone: '+7 (999) 000-00-00', role: 'admin', createdAt: '2025-01-01' },
-    { login: 'ivan',  password: 'qwerty', name: 'Иван Петров', email: 'ivan@mail.ru', phone: '+7 (999) 111-22-33', role: 'user', createdAt: '2025-03-15' }
-];
-
 const Store = {
+    // локальное (localStorage)
     _get(key, def) {
         try {
             const raw = localStorage.getItem(key);
@@ -51,30 +41,74 @@ const Store = {
     },
     _remove(key) { localStorage.removeItem(key); },
 
+    // серверное (кэш в памяти)
+    _settings: null,
+    _pages: null,
+
     init() {
-        if (!localStorage.getItem(DF.KEYS.pages)) this._set(DF.KEYS.pages, DF_DEFAULT_PAGES);
-        if (!localStorage.getItem(DF.KEYS.settings)) this._set(DF.KEYS.settings, DF_DEFAULT_SETTINGS);
-        if (!localStorage.getItem(DF.KEYS.promos)) this._set(DF.KEYS.promos, DF_DEFAULT_PROMOS);
-        if (!localStorage.getItem(DF.KEYS.users)) this._set(DF.KEYS.users, DF_DEFAULT_USERS);
+        this.refreshServerData();
     },
 
-    getPages() { return this._get(DF.KEYS.pages, {}); },
-    setPages(p) { return this._set(DF.KEYS.pages, p); },
-    getSettings() { return this._get(DF.KEYS.settings, DF_DEFAULT_SETTINGS); },
-    setSettings(s) { return this._set(DF.KEYS.settings, s); },
-    getPromos() { return this._get(DF.KEYS.promos, []); },
-    setPromos(list) { return this._set(DF.KEYS.promos, list); },
+    async refreshServerData() {
+        try {
+            const [settings, pages] = await Promise.all([
+                fetch('/api/settings').then(r => r.ok ? r.json() : {}),
+                fetch('/api/pages').then(r => r.ok ? r.json() : {})
+            ]);
+            this._settings = Object.assign({}, DF_DEFAULT_SETTINGS, settings || {});
+            this._pages = Object.assign({}, DF_DEFAULT_PAGES, pages || {});
+        } catch (e) {
+            console.warn('Сервер недоступен, использую дефолтные настройки');
+            this._settings = DF_DEFAULT_SETTINGS;
+            this._pages = DF_DEFAULT_PAGES;
+        }
+    },
+
+    getSettings() { return this._settings || DF_DEFAULT_SETTINGS; },
+
+    async saveSettings(settings) {
+        const res = await fetch('/api/settings', {
+            method: 'POST',
+            headers: Object.assign({ 'Content-Type': 'application/json' }, this.authHeaders()),
+            body: JSON.stringify(settings)
+        });
+        const data = await res.json();
+        if (data.success) await this.refreshServerData();
+        return data;
+    },
+
+    getPages() { return this._pages || DF_DEFAULT_PAGES; },
+
+    async savePage(key, content) {
+        const res = await fetch('/api/pages', {
+            method: 'POST',
+            headers: Object.assign({ 'Content-Type': 'application/json' }, this.authHeaders()),
+            body: JSON.stringify({ key, content })
+        });
+        const data = await res.json();
+        if (data.success) await this.refreshServerData();
+        return data;
+    },
+
+    // Корзина
     getCart() { return this._get(DF.KEYS.cart, []); },
     setCart(c) { return this._set(DF.KEYS.cart, c); },
+
+    // Избранное
     getFav() { return this._get(DF.KEYS.fav, []); },
     setFav(f) { return this._set(DF.KEYS.fav, f); },
-    
-    getUsers() { return this._get(DF.KEYS.users, []); },
-    setUsers(list) { return this._set(DF.KEYS.users, list); },
 
+    // Сессия (теперь хранит токен с сервера)
     getSession() { return this._get(DF.KEYS.session, null); },
     setSession(s) { return this._set(DF.KEYS.session, s); },
     clearSession() { this._remove(DF.KEYS.session); },
+
+    // Заголовки авторизации для запросов к API
+    authHeaders() {
+        const s = this.getSession();
+        return s && s.token ? { 'Authorization': 'Bearer ' + s.token } : {};
+    },
+
     getCookieOk() { return localStorage.getItem(DF.KEYS.cookie) === '1'; },
     setCookieOk() { localStorage.setItem(DF.KEYS.cookie, '1'); }
 };

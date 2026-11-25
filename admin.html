@@ -4,210 +4,275 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Админка — DropFlow</title>
-    <meta name="robots" content="noindex, nofollow">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/admin.css">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600&display=swap" rel="stylesheet">
 </head>
 <body class="admin-page">
-    
-    <div id="adminApp" hidden>
-        <aside class="admin-sidebar">
-            <div class="admin-logo">
-                <svg viewBox="0 0 48 48" width="36" height="36" aria-hidden="true">
-                    <defs><linearGradient id="lgAdmin" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#e8b06a"/><stop offset="100%" stop-color="#7eb8f0"/></linearGradient></defs>
-                    <path d="M24 4 L42 14 V34 L24 44 L6 34 V14 Z" fill="none" stroke="url(#lgAdmin)" stroke-width="2" stroke-linejoin="round"/>
-                    <path d="M16 18 H26 a6 6 0 0 1 0 12 H16 Z" fill="none" stroke="url(#lgAdmin)" stroke-width="2.5" stroke-linejoin="round"/>
-                    <circle cx="34" cy="34" r="3" fill="#e8b06a"/>
-                </svg>
-                <div><b>DROPFLOW</b><i>admin panel</i></div>
+
+<div id="adminApp" hidden>
+    <!-- ===== SIDEBAR ===== -->
+    <aside class="admin-sidebar">
+        <div class="admin-logo">
+            <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+                <rect x="1" y="1" width="34" height="34" stroke="#e8b06a" stroke-width="2"/>
+                <path d="M10 22 L18 10 L26 22 Z" fill="#e8b06a"/>
+            </svg>
+            <div>
+                <b>DROPFLOW</b>
+                <i>admin panel</i>
+            </div>
+        </div>
+
+        <nav class="admin-nav">
+            <button class="admin-nav-item active" data-section="products">📦 Товары</button>
+            <button class="admin-nav-item" data-section="orders">🧾 Все заказы</button>
+            <button class="admin-nav-item" data-section="promo">🎁 Промокоды</button>
+            <button class="admin-nav-item" data-section="users">👥 Пользователи</button>
+            <button class="admin-nav-item" data-section="pickup">📍 Точки выдачи</button>
+            <button class="admin-nav-item" data-section="comments">💬 Комментарии</button>
+            <button class="admin-nav-item" data-section="pages">📄 Страницы</button>
+            <button class="admin-nav-item" data-section="settings">⚙️ Настройки</button>
+        </nav>
+
+        <div class="admin-sidebar-footer">
+            <a href="index.html" class="admin-link">🌐 Открыть сайт</a>
+            <button class="admin-link danger" id="logoutBtn">🚪 Выйти</button>
+        </div>
+    </aside>
+
+    <!-- ===== MAIN ===== -->
+    <main class="admin-main">
+        <header class="admin-topbar">
+            <h1 id="adminPageTitle">Товары</h1>
+            <div class="admin-user">
+                <span id="adminUserName">Администратор</span>
+                <div class="admin-avatar">A</div>
+            </div>
+        </header>
+
+        <!-- ===== ТОВАРЫ ===== -->
+        <section class="admin-section active" data-section="products">
+            <div class="section-actions">
+                <h2>Каталог</h2>
+                <div class="actions-left">
+                    <input type="text" id="adminProductSearch" class="input" placeholder="Поиск по названию...">
+                    <button class="btn-accent" id="addProductBtn">+ Добавить товар</button>
+                </div>
+            </div>
+            <p class="admin-hint">Нажмите «Ред.» для редактирования или «Удал.» для удаления. Бегунок в углу скрывает товар с главной.</p>
+
+            <div class="section-actions">
+                <h2>📂 Категории товаров</h2>
+            </div>
+            <div class="admin-list" id="adminCategoriesList" style="margin-bottom:16px;"></div>
+            <div style="display:flex; gap:10px; margin-bottom:32px; flex-wrap:wrap;">
+                <input type="text" id="newCategoryInput" class="input" style="max-width:280px;" placeholder="Новая категория">
+                <button class="btn-ghost" id="addCategoryBtn">Добавить</button>
             </div>
 
-            <nav class="admin-nav">
-                <button class="admin-nav-item active" data-section="products"><span class="nav-ico">📦</span> Товары</button>
-                <button class="admin-nav-item" data-section="orders"><span class="nav-ico">🧾</span> Все заказы</button>
-                <button class="admin-nav-item" data-section="promo"><span class="nav-ico">🎁</span> Промокоды</button>
-                <button class="admin-nav-item" data-section="users"><span class="nav-ico">👥</span> Пользователи</button>
-                <button class="admin-nav-item" data-section="pages"><span class="nav-ico">📄</span> Страницы</button>
-                <button class="admin-nav-item" data-section="settings"><span class="nav-ico">⚙️</span> Настройки</button>
-            </nav>
+            <div id="adminProductsList" class="admin-preview-grid products-grid"></div>
+        </section>
 
-            <div class="admin-sidebar-footer">
-                <a href="index.html" class="admin-link" target="_blank" data-short="🌐">🌐 Открыть сайт</a>
-                <button id="logoutBtn" class="admin-link danger" data-short="🚪">🚪 Выйти</button>
+        <!-- ===== ЗАКАЗЫ ===== -->
+        <section class="admin-section" data-section="orders">
+            <div class="section-actions">
+                <h2>Заказы</h2>
+                <div class="actions-left">
+                    <button class="btn-ghost active" data-order-filter="all">Все</button>
+                    <button class="btn-ghost" data-order-filter="done">Завершённые</button>
+                    <button class="btn-ghost" data-order-filter="canceled">Отменённые</button>
+                </div>
             </div>
-        </aside>
+            <div class="admin-list" id="adminOrdersList"></div>
+        </section>
 
-        <main class="admin-main">
-            <header class="admin-topbar">
-                <h1 id="adminPageTitle">Товары</h1>
-                <div class="admin-user">
-                    <span id="adminUserName">admin</span>
-                    <div class="admin-avatar">A</div>
-                </div>
-            </header>
+        <!-- ===== ПРОМОКОДЫ ===== -->
+        <section class="admin-section" data-section="promo">
+            <div class="section-actions">
+                <h2>Промокоды и скидки</h2>
+                <button class="btn-accent" data-open-modal="promoModal">+ Добавить промокод</button>
+            </div>
+            <div class="admin-list" id="adminPromoList"></div>
+        </section>
 
-            <section class="admin-section active" data-section="products">
-                <div class="section-actions">
-                    <div class="actions-left">
-                        <input type="text" id="adminProductSearch" class="input" placeholder="🔍 Поиск товара...">
-                    </div>
-                    <button id="addProductBtn" class="btn-accent">+ Добавить товар</button>
-                </div>
-                <p class="admin-hint">Нажмите «Ред.» для редактирования или «Удал.» для удаления. Бегунок в углу скрывает товар с главной.</p>
-                <div id="adminProductsList" class="products-grid admin-preview-grid"></div>
-            </section>
+        <!-- ===== ПОЛЬЗОВАТЕЛИ ===== -->
+        <section class="admin-section" data-section="users">
+            <div class="section-actions"><h2>Пользователи</h2></div>
+            <div class="admin-list" id="adminUsersList"></div>
+        </section>
 
-            <section class="admin-section" data-section="orders">
-                <div class="tabs" id="orderTabs">
-                    <button class="tab active" data-filter="all">Все</button>
-                    <button class="tab" data-filter="done">Завершённые</button>
-                    <button class="tab" data-filter="canceled">Отменённые</button>
-                </div>
-                <div id="adminOrdersList" class="admin-list"></div>
-            </section>
+        <!-- ===== ТОЧКИ ВЫДАЧИ СДЭК ===== -->
+        <section class="admin-section" data-section="pickup">
+            <div class="section-actions"><h2>Точки выдачи СДЭК</h2></div>
+            <p class="admin-hint">Добавляйте пункты вручную по одному или списком. Формат списка: <b>Город;Название;Адрес;широта;долгота</b> — одна точка в строке. Координаты можно не указывать, тогда на карте точка ставится по адресу.</p>
 
-            <section class="admin-section" data-section="promo">
-                <div class="section-actions">
-                    <h2>Промокоды и скидки</h2>
-                    <button id="addPromoBtn" class="btn-accent">+ Добавить промокод</button>
-                </div>
-                <div id="adminPromoList" class="admin-list"></div>
-            </section>
-
-            <section class="admin-section" data-section="users">
-                <div class="section-actions">
-                    <h2>Пользователи</h2>
-                    <input type="text" id="adminUserSearch" class="input" placeholder="🔍 Поиск...">
-                </div>
-                <div id="adminUsersList" class="admin-list"></div>
-            </section>
-
-            <!-- РЕДАКТОР СТРАНИЦ -->
-            <section class="admin-section" data-section="pages">
-                <div class="tabs" style="margin-bottom: 20px;">
-                    <button class="tab active" data-page="about">О нас</button>
-                    <button class="tab" data-page="privacy">Политика конфиденциальности</button>
-                    <button class="tab" data-page="personal-data">Обработка персональных данных</button>
-                    <button class="tab" data-page="delivery">Доставка и оплата</button>
-                    <button class="tab" data-page="offer">Публичная оферта</button>
-                </div>
-                
-                <div class="editor-layout" style="display: grid; grid-template-columns: 250px 1fr; gap: 20px;">
-                    <div class="editor-sidebar" style="background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--r-md); padding: 20px;">
-                        <h3 style="font-size: 14px; color: #fff; margin-bottom: 15px;">Настройки вида</h3>
-                        <div class="form-row" style="margin-bottom: 20px;">
-                            <label style="font-size: 12px; color: var(--text-2); margin-bottom: 8px; display: block;">Главное фото (О нас)</label>
-                            <input type="file" id="editImageAbout" accept="image/*" style="display: none;">
-                            <label for="editImageAbout" class="btn-ghost" style="cursor:pointer; display: block; width: 100%; text-align: center; font-size: 12px; padding: 10px;">📁 Выбрать фото</label>
-                        </div>
-                        <div class="form-row">
-                            <label style="font-size: 12px; color: var(--text-2); margin-bottom: 8px; display: block;">Фон сайта (Hero)</label>
-                            <input type="file" id="editImageHero" accept="image/*" style="display: none;">
-                            <label for="editImageHero" class="btn-ghost" style="cursor:pointer; display: block; width: 100%; text-align: center; font-size: 12px; padding: 10px;">📁 Выбрать фон</label>
-                        </div>
-                        <button id="savePagesBtn" class="btn-accent full" style="margin-top: 30px;">Сохранить текст</button>
-                    </div>
-                    <div class="editor-preview" style="background: var(--bg); border: 1px solid var(--border); border-radius: var(--r-md); padding: 30px; min-height: 500px; position: relative;">
-                        <div style="color: var(--text-3); font-size: 12px; text-align: center; margin-bottom: 20px; border-bottom: 1px dashed var(--border); padding-bottom: 10px;">👁 Так страницу видит клиент</div>
-                        <div id="liveEditorContent" contenteditable="true" style="outline: none; color: var(--text); font-family: 'Montserrat', sans-serif; line-height: 1.6; font-size: 15px;"></div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- НАСТРОЙКИ -->
-            <section class="admin-section" data-section="settings">
-                <!-- Блок КАТЕГОРИЙ -->
-                <div class="settings-grid" style="margin-bottom: 20px; border-color: var(--accent-soft);">
-                    <h3 style="grid-column: 1 / -1; color: #fff; margin-bottom: 10px; font-family: 'Montserrat', sans-serif; font-size: 15px;">📂 Категории товаров</h3>
-                    <div class="form-row"><label>Новая категория</label><input type="text" id="newCategoryInput" class="input" placeholder="Например: Мебель"></div>
-                    <button id="addCategoryBtn" class="btn-accent" style="align-self: end;">Добавить</button>
-                    <select id="categoriesList" class="input select" size="5" style="grid-column: 1 / -1; margin-top:10px;"></select>
-                    <button id="deleteCategoryBtn" class="btn-ghost" style="grid-column: 1 / -1; margin-top:10px; color: var(--danger);">Удалить выбранную категорию</button>
-                </div>
-
-                <!-- Блок Реквизитов -->
-                <div class="settings-grid">
-                    <div class="form-row"><label>Юридическое название</label><input type="text" id="setLegalName" class="input" placeholder="Самозанятый Иванов Иван"></div>
-                    <div class="form-row"><label>ИНН</label><input type="text" id="setInn" class="input" placeholder="000000000000"></div>
-                    <div class="form-row"><label>Email</label><input type="email" id="setEmail" class="input"></div>
-                    <div class="form-row"><label>Телефон</label><input type="tel" id="setPhone" class="input" placeholder="+7 (___) ___-__-__"></div>
-                    <div class="form-row"><label>Адрес</label><input type="text" id="setAddress" class="input"></div>
-                    <div class="form-row"><label>Ссылка на ВК</label><input type="text" id="setVk" class="input"></div>
-                </div>
-                <div class="editor-actions">
-                    <button id="saveSettingsBtn" class="btn-accent">Сохранить настройки</button>
-                </div>
-            </section>
-
-        </main>
-    </div>
-
-    <!-- МОДАЛКА ТОВАРА -->
-    <div id="productModal" class="modal">
-        <div class="modal-content">
-            <button class="close-btn" data-close="productModal">&times;</button>
-            <h2 class="modal-title" id="productModalTitle">Товар</h2>
-            <form id="productForm" class="form">
-                <input type="hidden" name="id">
+            <form id="pickupForm" class="form">
                 <div class="form-grid-2">
-                    <div class="form-row"><label>Название *</label><input type="text" name="name" class="input" required></div>
-                    <div class="form-row"><label>Категория *</label><select name="category" id="productCategorySelect" class="input select" required></select></div>
-                    <div class="form-row"><label>Цена, ₽ *</label><input type="text" name="price" class="input price-input" required placeholder="Введите сумму"></div>
-                    <div class="form-row"><label>Старая цена, ₽</label><input type="text" name="oldPrice" class="input price-input" placeholder="Введите сумму"></div>
-                    <div class="form-row"><label>Рейтинг (0–5)</label><input type="number" name="rating" class="input" min="0" max="5" step="0.1" value="5"></div>
-                    <div class="form-row"><label>Популярный?</label><select name="popular" class="input select"><option value="no">Нет</option><option value="yes">Да</option></select></div>
+                    <div class="form-row"><label>Город *</label><input type="text" name="city" class="input" required></div>
+                    <div class="form-row"><label>Название</label><input type="text" name="name" class="input" placeholder="Пункт выдачи СДЭК"></div>
+                </div>
+                <div class="form-row"><label>Адрес *</label><input type="text" name="address" class="input" required></div>
+                <div class="form-grid-2">
+                    <div class="form-row"><label>Широта (lat) <small>необязательно</small></label><input type="text" name="lat" class="input" placeholder="64.5635"></div>
+                    <div class="form-row"><label>Долгота (lng) <small>необязательно</small></label><input type="text" name="lng" class="input" placeholder="39.8302"></div>
+                </div>
+                <button type="submit" class="btn-accent">Добавить точку</button>
+            </form>
+
+            <div class="section-actions" style="margin-top:28px;"><h2>Массовая загрузка списком</h2></div>
+            <div class="form-row">
+                <textarea id="pickupBulkText" class="input" rows="6" placeholder="Северодвинск;СДЭК на Труда;ул. Труда, 1;64.5635;39.8302&#10;Архангельск;СДЭК Троицкий;пр. Троицкий, 50;64.5402;40.5430"></textarea>
+            </div>
+            <button class="btn-ghost" id="pickupBulkBtn">Загрузить списком</button>
+
+            <div class="section-actions" style="margin-top:28px;"><h2>Текущие точки</h2></div>
+            <div class="admin-list" id="pickupList"></div>
+        </section>
+
+        <!-- ===== КОММЕНТАРИИ ===== -->
+        <section class="admin-section" data-section="comments">
+            <div class="section-actions"><h2>Модерация комментариев</h2></div>
+            <p class="admin-hint">Комментарии публикуются только после вашего одобрения.</p>
+            <div class="admin-list" id="pendingCommentsList"></div>
+        </section>
+
+        <!-- ===== СТРАНИЦЫ ===== -->
+        <section class="admin-section" data-section="pages">
+            <div class="section-actions"><h2>Редактор страниц</h2></div>
+            <div class="tabs">
+                <button class="tab active" data-page-editor="about">О нас</button>
+                <button class="tab" data-page-editor="privacy">Политика конфиденциальности</button>
+                <button class="tab" data-page-editor="personal-data">Обработка персональных данных</button>
+                <button class="tab" data-page-editor="delivery">Доставка и оплата</button>
+                <button class="tab" data-page-editor="offer">Публичная оферта</button>
+            </div>
+
+            <div class="form-row">
+                <textarea id="liveEditorContent" class="input" rows="14"></textarea>
+            </div>
+
+            <div class="settings-grid">
+                <div class="form-row">
+                    <label>Главное фото (О нас)</label>
+                    <input type="file" id="editImageAbout" accept="image/*" hidden>
+                    <button type="button" class="btn-ghost" onclick="document.getElementById('editImageAbout').click()">📁 Выбрать фото</button>
+                    <span id="aboutImageName" style="font-size:12px; color:var(--text-2); margin-left:8px;"></span>
                 </div>
                 <div class="form-row">
-                    <label>Картинка товара</label>
-                    <div class="image-upload-wrapper">
-                        <label for="imageFile" class="btn-ghost" style="cursor:pointer; display:inline-block; padding: 10px 20px; border: 1px solid var(--border); border-radius: var(--r-sm);">📁 Выбрать фото</label>
-                        <input type="file" id="imageFile" accept="image/*" style="display:none;">
-                        <input type="hidden" name="image" id="imagePath">
-                        <span id="imageFileName" style="margin-left: 10px; color: var(--text-3); font-size: 13px;"></span>
-                    </div>
+                    <label>Фон сайта (Hero)</label>
+                    <input type="file" id="editImageHero" accept="image/*" hidden>
+                    <button type="button" class="btn-ghost" onclick="document.getElementById('editImageHero').click()">📁 Выбрать фон</button>
+                    <span id="heroImageName" style="font-size:12px; color:var(--text-2); margin-left:8px;"></span>
                 </div>
-                <div class="form-row"><label>Описание</label><textarea name="description" class="input" rows="3"></textarea></div>
-                <div class="editor-actions">
-                    <button type="submit" class="btn-accent">Сохранить</button>
-                    <button type="button" class="btn-ghost" data-close="productModal">Отмена</button>
+            </div>
+
+            <div class="editor-actions">
+                <button class="btn-accent" id="savePagesBtn">Сохранить текст</button>
+            </div>
+        </section>
+
+        <!-- ===== НАСТРОЙКИ ===== -->
+        <section class="admin-section" data-section="settings">
+            <div class="section-actions"><h2>Настройки</h2></div>
+
+            <div class="section-actions">
+                <h2>🔥 Баннер-реклама</h2>
+            </div>
+            <p class="admin-hint">Загрузите готовую картинку нужного формата — вся информация будет на ней.</p>
+            <div class="form-row">
+                <input type="file" id="bannerImage" accept="image/*" hidden>
+                <button type="button" class="btn-ghost" onclick="document.getElementById('bannerImage').click()">📁 Загрузить баннер</button>
+                <span id="bannerImageName" style="font-size:12px; color:var(--text-2); margin-left:8px;"></span>
+            </div>
+
+            <div class="settings-grid">
+                <div class="form-row"><label>Юридическое название</label><input type="text" id="setLegalName" class="input"></div>
+                <div class="form-row"><label>ИНН</label><input type="text" id="setInn" class="input"></div>
+                <div class="form-row"><label>Email</label><input type="text" id="setEmail" class="input"></div>
+                <div class="form-row"><label>Телефон</label><input type="text" id="setPhone" class="input"></div>
+                <div class="form-row"><label>Адрес</label><input type="text" id="setAddress" class="input"></div>
+                <div class="form-row"><label>Ссылка на ВК</label><input type="text" id="setVk" class="input"></div>
+            </div>
+            <button class="btn-accent" id="saveSettingsBtn">Сохранить настройки</button>
+        </section>
+    </main>
+</div>
+
+<!-- ===== МОДАЛКА: ТОВАР ===== -->
+<div id="productModal" class="modal">
+    <div class="modal-content">
+        <button class="close-btn" data-close="productModal">×</button>
+        <h2 class="modal-title" id="productModalTitle">Товар</h2>
+        <form id="productForm" class="form">
+            <input type="hidden" name="id">
+            <div class="form-row"><label>Название *</label><input type="text" name="name" class="input" required></div>
+            <div class="form-grid-2">
+                <div class="form-row"><label>Категория *</label><select name="category" id="productCategorySelect" class="input select" required></select></div>
+                <div class="form-row"><label>Популярный?</label>
+                    <select name="popular" class="input select">
+                        <option value="no">Нет</option>
+                        <option value="yes">Да</option>
+                    </select>
                 </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- МОДАЛКА ЗАКАЗА -->
-    <div id="orderModal" class="modal">
-        <div class="modal-content">
-            <button class="close-btn" data-close="orderModal">&times;</button>
-            <h2 class="modal-title">Заказ</h2>
-            <div id="orderModalBody"></div>
-        </div>
-    </div>
-
-    <!-- МОДАЛКА ПРОМОКОДА -->
-    <div id="promoModal" class="modal">
-        <div class="modal-content small">
-            <button class="close-btn" data-close="promoModal">&times;</button>
-            <h2 class="modal-title">Новый промокод</h2>
-            <form id="promoForm" class="form">
-                <div class="form-row"><label>Код *</label><input type="text" name="code" class="input" placeholder="SALE10" required></div>
-                <div class="form-row"><label>Тип скидки *</label><select name="type" class="input select"><option value="percent">Процент (%)</option><option value="fixed">Сумма (₽)</option></select></div>
-                <div class="form-row"><label>Размер *</label><input type="number" name="value" class="input" min="1" required></div>
-                <div class="editor-actions">
-                    <button type="submit" class="btn-accent">Сохранить</button>
-                    <button type="button" class="btn-ghost" data-close="promoModal">Отмена</button>
+            </div>
+            <div class="form-grid-2">
+                <div class="form-row"><label>Цена, ₽ *</label><input type="number" name="price" class="input price-input" required min="1"></div>
+                <div class="form-row"><label>Старая цена, ₽</label><input type="number" name="oldPrice" class="input price-input" min="0"></div>
+            </div>
+            <div class="form-grid-2">
+                <div class="form-row"><label>Рейтинг (0–5)</label><input type="number" name="rating" class="input price-input" min="0" max="5" step="0.1" value="5"></div>
+                <div class="form-row"><label>Картинка товара</label>
+                    <input type="file" id="imageFile" accept="image/*" hidden>
+                    <button type="button" class="btn-ghost" onclick="document.getElementById('imageFile').click()">📁 Выбрать фото</button>
+                    <span id="imageFileName" style="font-size:12px; color:var(--text-2); margin-left:8px;"></span>
+                    <input type="text" name="image" id="imagePath" class="input" placeholder="или вставьте ссылку" style="margin-top:8px;">
                 </div>
-            </form>
-        </div>
+            </div>
+            <div class="form-row"><label>Описание</label><textarea name="description" class="input" rows="4"></textarea></div>
+            <div class="editor-actions">
+                <button type="submit" class="btn-accent">Сохранить</button>
+                <button type="button" class="btn-ghost" data-close="productModal">Отмена</button>
+            </div>
+        </form>
     </div>
+</div>
 
-    <div id="toastBox" class="toast-box"></div>
+<!-- ===== МОДАЛКА: ЗАКАЗ ===== -->
+<div id="orderModal" class="modal">
+    <div class="modal-content">
+        <button class="close-btn" data-close="orderModal">×</button>
+        <h2 class="modal-title">Заказ</h2>
+        <div id="orderModalBody"></div>
+    </div>
+</div>
 
-    <script src="js/data.js"></script>
-    <script src="js/auth.js"></script>
-    <script src="js/admin.js"></script>
+<!-- ===== МОДАЛКА: ПРОМОКОД ===== -->
+<div id="promoModal" class="modal">
+    <div class="modal-content small">
+        <button class="close-btn" data-close="promoModal">×</button>
+        <h2 class="modal-title">Новый промокод</h2>
+        <form id="promoForm" class="form">
+            <div class="form-row"><label>Код *</label><input type="text" name="code" class="input" required placeholder="WELCOME10"></div>
+            <div class="form-row"><label>Тип скидки *</label>
+                <select name="type" class="input select">
+                    <option value="percent">Процент %</option>
+                    <option value="fixed">Фиксированная сумма ₽</option>
+                </select>
+            </div>
+            <div class="form-row"><label>Размер *</label><input type="number" name="value" class="input price-input" required min="1"></div>
+            <div class="editor-actions">
+                <button type="submit" class="btn-accent">Сохранить</button>
+                <button type="button" class="btn-ghost" data-close="promoModal">Отмена</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="toast-box" id="toastBox"></div>
+
+<script src="js/data.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/admin.js"></script>
 </body>
 </html>

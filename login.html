@@ -4,132 +4,162 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Вход — DropFlow</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600&display=swap" rel="stylesheet">
 </head>
 <body class="auth-page">
-
-    <a href="index.html" class="auth-back">← На главную</a>
+    <a href="index.html" class="auth-back">← Вернуться в магазин</a>
 
     <div class="auth-wrap">
+        <!-- ===== ФОРМА ===== -->
         <div class="auth-card">
             <div class="auth-logo">
-                <svg viewBox="0 0 48 48" width="56" height="56" style="filter: drop-shadow(0 15px 20px rgba(0,0,0,0.6)) drop-shadow(0 0 30px rgba(232,176,106,0.4)); transform: perspective(500px) rotateX(15deg) rotateY(-10deg);">
-                    <defs><linearGradient id="lgAuth" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#e8b06a"/><stop offset="100%" stop-color="#7eb8f0"/></linearGradient></defs>
-                    <path d="M24 4 L42 14 V34 L24 44 L6 34 V14 Z" fill="none" stroke="url(#lgAuth)" stroke-width="2"/>
-                    <path d="M16 18 H26 a6 6 0 0 1 0 12 H16 Z" fill="none" stroke="url(#lgAuth)" stroke-width="2.5"/>
-                    <circle cx="34" cy="34" r="3" fill="#e8b06a"/>
+                <svg width="48" height="48" viewBox="0 0 36 36" fill="none">
+                    <rect x="1" y="1" width="34" height="34" stroke="#e8b06a" stroke-width="2"/>
+                    <path d="M10 22 L18 10 L26 22 Z" fill="#e8b06a"/>
                 </svg>
-                <h1 style="font-size: 26px; letter-spacing: 0.3em; color: #fff; font-weight: 700; font-family: 'Montserrat', sans-serif; text-shadow: 2px 2px 4px rgba(0,0,0,0.5), 0 0 20px rgba(232,176,106,0.3); transform: perspective(500px) translateZ(20px);">DROPFLOW</h1>
-                <p class="auth-sub">Войдите в личный кабинет</p>
+                <h1>DROPFLOW</h1>
+                <p class="auth-sub">Личный кабинет</p>
             </div>
 
             <div class="auth-tabs">
-                <button class="auth-tab active" data-tab="login">Вход</button>
-                <button class="auth-tab" data-tab="register">Регистрация</button>
+                <button class="auth-tab active" id="tabLogin">Вход</button>
+                <button class="auth-tab" id="tabRegister">Регистрация</button>
             </div>
 
-            <div id="authMessage" class="auth-message" hidden></div>
+            <div class="auth-message" id="authMessage" hidden></div>
 
-            <form id="loginForm" class="auth-form">
-                <div class="form-row"><label>Логин или Email</label><input type="text" name="login" class="input" required></div>
-                <div class="form-row"><label>Пароль</label><input type="password" name="password" class="input" required></div>
-                <button type="submit" class="btn-accent full big">Войти</button>
+            <!-- Вход -->
+            <form id="loginForm" class="auth-form form">
+                <div class="form-row">
+                    <label>Логин или email</label>
+                    <input type="text" name="login" class="input" required autocomplete="username">
+                </div>
+                <div class="form-row">
+                    <label>Пароль</label>
+                    <input type="password" name="password" class="input" required autocomplete="current-password">
+                </div>
+                <button type="submit" class="btn-accent big full">Войти</button>
             </form>
 
-            <form id="registerForm" class="auth-form" hidden>
-             <div class="form-row">
-                 <label>ФИО полностью</label>
-                 <input type="text" name="name" class="input" placeholder="Иванов Иван Иванович" required>
-            </div>
-                <div class="form-row"><label>Email</label><input type="email" name="email" class="input" required></div>
-                <div class="form-row"><label>Телефон</label><input type="tel" name="phone" class="input" required></div>
-                <div class="form-row"><label>Логин</label><input type="text" name="login" class="input" required></div>
-                <div class="form-row"><label>Пароль</label><input type="password" name="password" class="input" minlength="6" required></div>
-                <button type="submit" class="btn-accent full big">Создать аккаунт</button>
+            <!-- Регистрация -->
+            <form id="registerForm" class="auth-form form" hidden>
+                <div class="form-row">
+                    <label>ФИО *</label>
+                    <input type="text" name="name" class="input" required placeholder="Иванов Иван Иванович">
+                </div>
+                <div class="form-grid-2">
+                    <div class="form-row">
+                        <label>Email *</label>
+                        <input type="email" name="email" class="input" required placeholder="you@mail.ru">
+                    </div>
+                    <div class="form-row">
+                        <label>Телефон *</label>
+                        <input type="tel" name="phone" class="input" required placeholder="+7 (___) ___-__-__">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <label>Логин *</label>
+                    <input type="text" name="login" class="input" required placeholder="латиница и цифры" autocomplete="username">
+                </div>
+                <div class="form-row">
+                    <label>Пароль * <small>минимум 6 символов</small></label>
+                    <input type="password" name="password" class="input" required minlength="6" autocomplete="new-password">
+                </div>
+                <button type="submit" class="btn-accent big full">Создать аккаунт</button>
             </form>
+
+            <p class="auth-hint">Регистрируясь, вы соглашаетесь с <a href="index.html">условиями сервиса</a></p>
         </div>
 
+        <!-- ===== ПРАВАЯ ЧАСТЬ ===== -->
         <div class="auth-side">
-            <h2>Добро пожаловать в DropFlow</h2>
-            <p>Личный кабинет даёт вам:</p>
+            <h2>DropFlow</h2>
+            <p>Магазин отобранных вручную вещей с доставкой по России через СДЭК.</p>
             <ul>
-                <li>📦 Историю заказов и их статус</li>
-                <li>♥ Список избранных товаров</li>
-                <li>📱 Уведомления в Telegram</li>
+                <li>📦 Только проверенные товары</li>
+                <li>🚚 Доставка СДЭК по всей России</li>
+                <li>💳 Безопасная оплата через ЮKassa</li>
+                <li>💬 Личный кабинет с историей заказов</li>
             </ul>
         </div>
     </div>
 
-    <script src="js/data.js"></script>
-    <script src="js/auth.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const tabs = document.querySelectorAll('.auth-tab');
-            const loginForm = document.getElementById('loginForm');
-            const registerForm = document.getElementById('registerForm');
-            const messageEl = document.getElementById('authMessage');
+    <div class="toast-box" id="toastBox"></div>
 
-            // Переключение вкладок
-            tabs.forEach(tab => {
-                tab.addEventListener('click', () => {
-                    tabs.forEach(t => t.classList.remove('active'));
-                    tab.classList.add('active');
-                    if (tab.dataset.tab === 'login') {
-                        loginForm.hidden = false;
-                        registerForm.hidden = true;
-                    } else {
-                        loginForm.hidden = true;
-                        registerForm.hidden = false;
-                    }
-                    messageEl.hidden = true;
-                });
-            });
+<script src="js/data.js"></script>
+<script src="js/auth.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // Уже вошёл — на главную (или в админку)
+        if (Auth.isLoggedIn()) {
+            window.location.href = Auth.isAdmin() ? 'admin.html' : 'index.html';
+            return;
+        }
 
-            // Вход
-            loginForm.addEventListener('submit', (e) => {
-                e.preventDefault();
-                const fd = new FormData(loginForm);
-                const res = Auth.login(fd.get('login'), fd.get('password'));
-                if (!res.ok) {
-                    messageEl.hidden = false;
-                    messageEl.className = 'auth-message error';
-                    messageEl.textContent = res.error;
-                    return;
-                }
-                messageEl.hidden = false;
-                messageEl.className = 'auth-message success';
-                messageEl.textContent = 'Успешный вход! Перенаправляем...';
-                setTimeout(() => {
-                    window.location.href = res.user.role === 'admin' ? 'admin.html' : 'index.html';
-                }, 500);
-            });
+        const tabLogin = document.getElementById('tabLogin');
+        const tabRegister = document.getElementById('tabRegister');
+        const loginForm = document.getElementById('loginForm');
+        const registerForm = document.getElementById('registerForm');
+        const message = document.getElementById('authMessage');
 
-            // Регистрация
-            registerForm.addEventListener('submit', (e) => {
-                e.preventDefault();
-                const fd = new FormData(registerForm);
-                const res = Auth.register({
-                    name: fd.get('name'),
-                    email: fd.get('email'),
-                    phone: fd.get('phone'),
-                    login: fd.get('login'),
-                    password: fd.get('password')
-                });
-                if (!res.ok) {
-                    messageEl.hidden = false;
-                    messageEl.className = 'auth-message error';
-                    messageEl.textContent = res.error;
-                    return;
-                }
-                messageEl.hidden = false;
-                messageEl.className = 'auth-message success';
-                messageEl.textContent = 'Аккаунт создан! Перенаправляем...';
-                setTimeout(() => window.location.href = 'index.html', 500);
-            });
+        function showMsg(text, type) {
+            message.hidden = false;
+            message.textContent = text;
+            message.className = 'auth-message ' + type;
+        }
+
+        function switchTab(isLogin) {
+            tabLogin.classList.toggle('active', isLogin);
+            tabRegister.classList.toggle('active', !isLogin);
+            loginForm.hidden = !isLogin;
+            registerForm.hidden = isLogin;
+            message.hidden = true;
+        }
+
+        tabLogin.addEventListener('click', () => switchTab(true));
+        tabRegister.addEventListener('click', () => switchTab(false));
+
+        loginForm.addEventListener('submit', async e => {
+            e.preventDefault();
+            const fd = new FormData(loginForm);
+            const btn = loginForm.querySelector('button[type=submit]');
+            btn.disabled = true;
+            btn.textContent = 'Входим...';
+            const result = await Auth.login(fd.get('login'), fd.get('password'));
+            btn.disabled = false;
+            btn.textContent = 'Войти';
+            if (result.ok) {
+                showMsg('Вход выполнен, переносим...', 'success');
+                window.location.href = result.user.role === 'admin' ? 'admin.html' : 'index.html';
+            } else {
+                showMsg(result.error, 'error');
+            }
         });
-    </script>
+
+        registerForm.addEventListener('submit', async e => {
+            e.preventDefault();
+            const fd = new FormData(registerForm);
+            const btn = registerForm.querySelector('button[type=submit]');
+            btn.disabled = true;
+            btn.textContent = 'Создаём аккаунт...';
+            const result = await Auth.register({
+                name: fd.get('name'),
+                email: fd.get('email'),
+                phone: fd.get('phone'),
+                login: fd.get('login'),
+                password: fd.get('password')
+            });
+            btn.disabled = false;
+            btn.textContent = 'Создать аккаунт';
+            if (result.ok) {
+                showMsg('Аккаунт создан! Добро пожаловать.', 'success');
+                window.location.href = 'index.html';
+            } else {
+                showMsg(result.error, 'error');
+            }
+        });
+    });
+</script>
 </body>
 </html>
