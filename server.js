@@ -155,7 +155,35 @@ app.post('/api/order/status', async (req, res) => {
         res.status(500).json({ success: false });
     }
 });
+// === API: СОЗДАТЬ ПЛАТЕЖ ЮKASSA ===
+app.post('/api/pay', async (req, res) => {
+    try {
+        const { amount, orderId } = req.body;
+        const { YooKassa } = require('yookassa-api-sdk');
+        
+        const sdk = YooKassa({
+            shop_id: process.env.YOOKASSA_SHOP_ID,
+            secret_key: process.env.YOOKASSA_SECRET_KEY,
+        });
 
+        const payment = await sdk.payments.create({
+            amount: { value: String(amount), currency: 'RUB' },
+            confirmation: { 
+                type: 'redirect', 
+                return_url: 'http://24dropflow.ru/payment.html' // Куда вернётся клиент после оплаты
+            },
+            capture: true, // Списание сразу (в одну стадию)
+            description: `Заказ №${orderId}`,
+            metadata: { order_id: orderId }
+        });
+
+        // Отправляем ссылку на оплату клиенту
+        res.json({ success: true, confirmation_url: payment.confirmation.confirmation_url });
+    } catch (err) {
+        console.error('Ошибка ЮKassa:', err);
+        res.status(500).json({ success: false, error: 'Ошибка создания платежа' });
+    }
+});
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Сервер запущен на http://localhost:${PORT}`);
 });

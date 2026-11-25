@@ -56,7 +56,7 @@
                     </div>
                     <button id="addProductBtn" class="btn-accent">+ Добавить товар</button>
                 </div>
-                <p class="admin-hint">Нажмите «Ред.» для редактирования или «Удал.» для удаления товара.</p>
+                <p class="admin-hint">Нажмите «Ред.» для редактирования или «Удал.» для удаления. Бегунок в углу скрывает товар с главной.</p>
                 <div id="adminProductsList" class="products-grid admin-preview-grid"></div>
             </section>
 
@@ -125,6 +125,7 @@
                     <div class="form-row"><label>Новая категория</label><input type="text" id="newCategoryInput" class="input" placeholder="Например: Мебель"></div>
                     <button id="addCategoryBtn" class="btn-accent" style="align-self: end;">Добавить</button>
                     <select id="categoriesList" class="input select" size="5" style="grid-column: 1 / -1; margin-top:10px;"></select>
+                    <button id="deleteCategoryBtn" class="btn-ghost" style="grid-column: 1 / -1; margin-top:10px; color: var(--danger);">Удалить выбранную категорию</button>
                 </div>
 
                 <!-- Блок Реквизитов -->

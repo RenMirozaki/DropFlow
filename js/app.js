@@ -283,18 +283,37 @@ document.addEventListener('DOMContentLoaded', () => {
     if (checkoutBtn) checkoutBtn.addEventListener('click', () => { if (cart.length === 0) return; closeCart(); checkoutModal.classList.add('open'); });
     if (closeCheckout) closeCheckout.addEventListener('click', () => checkoutModal.classList.remove('open'));
 
+
     if (payBtn) {
-        payBtn.addEventListener('click', () => {
+        payBtn.addEventListener('click', async () => {
             if (!checkoutForm.checkValidity()) { checkoutForm.reportValidity(); return; }
+            
             const sub = cart.reduce((s, i) => s + i.price * i.quantity, 0);
             let discount = 0;
             if (appliedPromo) discount = appliedPromo.type === 'percent' ? Math.round(sub * appliedPromo.value / 100) : Math.min(appliedPromo.value, sub);
             const total = Math.max(0, sub - discount);
-            localStorage.setItem('df_last_total', total);
-            window.location.href = 'payment.html';
+
+            try {
+                // Отправляем запрос на сервер для создания платежа
+                const response = await fetch('/api/pay', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ amount: total, orderId: Date.now() }) // orderId можно заменить на реальный ID заказа
+                });
+                const data = await response.json();
+
+                if (data.success && data.confirmation_url) {
+                    // Перенаправляем на страницу оплаты ЮKassa
+                    window.location.href = data.confirmation_url;
+                } else {
+                    alert('Ошибка при создании платежа. Попробуйте позже.');
+                }
+            } catch (e) {
+                console.error('Ошибка:', e);
+                alert('Не удалось связаться с сервером.');
+            }
         });
     }
-
     document.querySelectorAll('[data-page]').forEach(link => {
         link.addEventListener('click', e => {
             e.preventDefault();

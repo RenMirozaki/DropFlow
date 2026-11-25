@@ -17,6 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let orderFilter = 'all';
         let categories = [];
 
+        // Элементы
         const navItems = document.querySelectorAll('.admin-nav-item');
         const sections = document.querySelectorAll('.admin-section');
         const pageTitle = document.getElementById('adminPageTitle');
@@ -43,7 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (logoutBtn) logoutBtn.addEventListener('click', () => { if (confirm('Выйти?')) { Auth.logout(); window.location.href = 'index.html'; } });
 
-        // Загружаем данные с сервера
+        // === ЗАГРУЗКА ДАННЫХ ===
         async function loadData() {
             try {
                 const resP = await fetch('/api/products');
@@ -52,7 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 orders = await resO.json();
                 const resC = await fetch('/api/categories');
                 categories = await resC.json();
-            } catch (e) { console.error(e); }
+            } catch (e) { console.error('Ошибка загрузки данных', e); }
             renderProducts();
             renderOrders();
             renderPromos();
@@ -62,6 +63,7 @@ document.addEventListener('DOMContentLoaded', () => {
             updateCategoriesSelect();
         }
 
+        // === КАТЕГОРИИ ===
         function updateCategoriesSelect() {
             const select = document.getElementById('productCategorySelect');
             const list = document.getElementById('categoriesList');
@@ -73,6 +75,23 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
+        const addCategoryBtn = document.getElementById('addCategoryBtn');
+        if (addCategoryBtn) {
+            addCategoryBtn.addEventListener('click', async () => {
+                const input = document.getElementById('newCategoryInput');
+                const name = input.value.trim();
+                if (!name) return;
+                await fetch('/api/categories', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name })
+                });
+                input.value = '';
+                await loadData();
+                DFUtil.toast('Категория добавлена', 'success');
+            });
+        }
+
         // === ТОВАРЫ ===
         function renderProducts() {
             const q = adminProductSearch ? adminProductSearch.value.trim().toLowerCase() : '';
@@ -80,13 +99,15 @@ document.addEventListener('DOMContentLoaded', () => {
             const container = document.getElementById('adminProductsList');
             if (!container) return;
             if (list.length === 0) { container.innerHTML = '<div class="list-empty">Товаров нет.</div>'; return; }
+            
             container.innerHTML = list.map(p => `
                 <div class="product-card" style="position:relative;">
+                    <div class="toggle-wrapper" title="Скрыть с главной">
+                        <input type="checkbox" class="toggle-checkbox" data-hide-toggle="${p.id}" id="toggle-${p.id}" ${p.hidden ? 'checked' : ''}>
+                        <label class="toggle-label" for="toggle-${p.id}">Скрыт</label>
+                    </div>
                     <div class="product-media">
-                        <img src="${DFUtil.escapeHtml(p.image)}" alt="${DFUtil.escapeHtml(p.name)}">
-                        <div class="product-badges">
-                            ${p.old_price ? `<span class="p-badge sale">SALE</span>` : ''}
-                        </div>
+                        <img src="${DFUtil.escapeHtml(p.image)}" alt="${DFUtil.escapeHtml(p.name)}" onerror="this.src='https://via.placeholder.com/400x400/1a2f26/e8b06a?text=DropFlow';">
                     </div>
                     <div class="product-info">
                         <span class="product-category">${DFUtil.escapeHtml(p.category)}</span>
@@ -99,6 +120,22 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                 </div>
             `).join('');
+
+            container.querySelectorAll('[data-hide-toggle]').forEach(toggle => {
+                toggle.addEventListener('change', async (e) => {
+                    const id = Number(e.target.dataset.hideToggle);
+                    const p = products.find(x => x.id === id);
+                    if (p) {
+                        p.hidden = e.target.checked;
+                        await fetch('/api/products', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ ...p, id: p.id, hidden: p.hidden })
+                        });
+                    }
+                });
+            });
+
             window.editProduct = (id) => {
                 const p = products.find(x => x.id === id);
                 if (!p) return;
@@ -130,6 +167,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 imagePathInput.value = '';
                 productModalTitle.textContent = 'Новый товар';
                 productModal.classList.add('open');
+            });
+        }
+
+        if (imageFileInput) {
+            imageFileInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    imageFileName.textContent = file.name;
+                    imagePathInput.value = 'images/' + file.name;
+                }
             });
         }
 
@@ -274,24 +321,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 settings.tg = document.getElementById('setVk').value.trim();
                 Store.setSettings(settings);
                 DFUtil.toast('Настройки сохранены', 'success');
-            });
-        }
-
-        // === ДОБАВЛЕНИЕ КАТЕГОРИЙ ===
-        const addCategoryBtn = document.getElementById('addCategoryBtn');
-        if (addCategoryBtn) {
-            addCategoryBtn.addEventListener('click', async () => {
-                const input = document.getElementById('newCategoryInput');
-                const name = input.value.trim();
-                if (!name) return;
-                await fetch('/api/categories', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name })
-                });
-                input.value = '';
-                await loadData();
-                DFUtil.toast('Категория добавлена', 'success');
             });
         }
 
