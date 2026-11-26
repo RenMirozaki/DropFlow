@@ -27,7 +27,6 @@ app.use(express.static(path.join(__dirname, '/')));
 
 // ================= ХЕЛПЕРЫ =================
 
-// Токен = login + HMAC-подпись (без внешних библиотек)
 const SECRET = process.env.SESSION_SECRET || 'dropflow-change-me';
 function signToken(login) {
     const sig = crypto.createHmac('sha256', SECRET).update(login).digest('hex');
@@ -63,7 +62,7 @@ async function requireUser(req, res, next) {
     next();
 }
 
-// Загрузка файлов (multer) — фото товаров, баннер, фоны
+// Загрузка файлов
 const imagesDir = path.join(__dirname, 'images');
 if (!fs.existsSync(imagesDir)) fs.mkdirSync(imagesDir, { recursive: true });
 const storage = multer.diskStorage({
@@ -194,14 +193,13 @@ app.post('/api/upload', requireAdmin, upload.single('file'), (req, res) => {
     res.json({ success: true, url: '/images/' + req.file.filename });
 });
 
-// ================= ПРОМОКОДЫ (в базе) =================
+// ================= ПРОМОКОДЫ =================
 
 app.get('/api/promos', requireAdmin, async (req, res) => {
     try { res.json((await db.query('SELECT * FROM promos ORDER BY id')).rows); }
     catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Проверка промокода для клиента
 app.post('/api/promo/check', async (req, res) => {
     try {
         const { code, subtotal } = req.body;
@@ -229,7 +227,7 @@ app.delete('/api/promos/:id', requireAdmin, async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ================= СТРАНИЦЫ, НАСТРОЙКИ, БАННЕР =================
+// ================= СТРАНИЦЫ, НАСТРОЙКИ =================
 
 app.get('/api/pages', async (req, res) => {
     try {
@@ -269,25 +267,60 @@ app.post('/api/settings', requireAdmin, async (req, res) => {
 
 // ================= ЗАКАЗЫ =================
 
+// Пункт 3: Пересчет суммы на сервере
 app.post('/api/order', orderLimiter, [
     body('name').trim().isLength({ min: 3 }).withMessage('Укажите ФИО').matches(/^[а-яА-ЯёЁa-zA-Z\s]+$/).withMessage('ФИО должно содержать только буквы'),
     body('phone').trim().isLength({ min: 10 }).withMessage('Укажите телефон'),
     body('address').trim().isLength({ min: 5 }).withMessage('Укажите адрес доставки или пункт выдачи'),
-    body('total').isInt({ min: 1 }).withMessage('Неверная сумма заказа')
+    body('items').isArray({ min: 1 }).withMessage('Корзина пуста'),
+    body('promoCode').optional().trim()
 ], async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) return res.status(400).json({ success: false, errors: errors.array() });
     try {
-        const { name, phone, email, address, items, total, comment } = req.body;
+        const { name, phone, email, address, items, comment, promoCode } = req.body;
         const user = await getUser(req);
+
+        // Пересчитываем сумму на основе актуальных цен из БД
+        let calculatedTotal = 0;
+        const validItems = [];
+
+        for (const item of items) {
+            const p = await db.query('SELECT id, name, price, image FROM products WHERE id = $1 AND hidden = false', [item.id]);
+            if (p.rows.length === 0) return res.status(400).json({ success: false, error: `Товар "${item.name}" больше не доступен` });
+            
+            const product = p.rows[0];
+            const qty = Math.max(1, Number(item.quantity) || 1);
+            calculatedTotal += product.price * qty;
+            validItems.push({
+                id: product.id,
+                name: product.name,
+                price: product.price,
+                image: product.image,
+                quantity: qty
+            });
+        }
+
+        // Применяем промокод на сервере
+        if (promoCode) {
+            const r = await db.query('SELECT * FROM promos WHERE UPPER(code) = UPPER($1)', [promoCode.trim()]);
+            const promo = r.rows[0];
+            if (promo) {
+                let discount = promo.type === 'percent' ? Math.round(calculatedTotal * promo.value / 100) : Math.min(promo.value, calculatedTotal);
+                calculatedTotal = Math.max(0, calculatedTotal - discount);
+            }
+        }
+
         const result = await db.query(
             `INSERT INTO orders (name, phone, email, address, comment, items, total, status, payment_status, user_login)
              VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id`,
-            [name, phone, email || (user ? user.email : null), address, comment || null, JSON.stringify(items), total, 'active', 'pending', user ? user.login : null]);
+            [name, phone, email || (user ? user.email : null), address, comment || null, JSON.stringify(validItems), calculatedTotal, 'active', 'pending', user ? user.login : null]);
         const orderId = result.rows[0].id;
-        console.log(`🛒 Новый заказ №${orderId} от ${name} на сумму ${total} ₽`);
-        await tgNotify(`🛒 *Новый заказ №${orderId}*\n\n👤 ${name}\n📞 ${phone}\n📍 ${address}\n💰 Сумма: ${total} ₽`);
-        res.status(200).json({ success: true, orderId });
+        
+        console.log(`🛒 Новый заказ №${orderId} от ${name} на сумму ${calculatedTotal} ₽`);
+        await tgNotify(`🛒 *Новый заказ №${orderId}*\n\n👤 ${name}\n📞 ${phone}\n📍 ${address}\n💰 Сумма: ${calculatedTotal} ₽`);
+        
+        res.status(200).json({ success: true, orderId, total: calculatedTotal });
     } catch (err) {
         console.error('Ошибка сохранения заказа:', err);
         res.status(500).json({ success: false, error: 'Ошибка сервера' });
@@ -301,7 +334,6 @@ app.get('/api/orders', requireAdmin, async (req, res) => {
     } catch (err) { res.status(500).json({ error: 'Ошибка сервера' }); }
 });
 
-// Заказы текущего пользователя (для личного кабинета)
 app.get('/api/orders/my', requireUser, async (req, res) => {
     try {
         const result = await db.query('SELECT * FROM orders WHERE user_login = $1 ORDER BY id DESC', [req.user.login]);
@@ -321,7 +353,7 @@ app.post('/api/order/status', requireAdmin, async (req, res) => {
 
 // ================= ЮKASSA =================
 
-// Шаг 1: создать платёж по сохранённому заказу
+// Шаг 1: создать платёж по сохранённому заказу (Пункт 2: Чеки 54-ФЗ)
 app.post('/api/pay', orderLimiter, async (req, res) => {
     try {
         const { orderId } = req.body;
@@ -336,13 +368,35 @@ app.post('/api/pay', orderLimiter, async (req, res) => {
 
         const host = process.env.SITE_URL || `${req.protocol}://${req.get('host')}`;
         const idempKey = crypto.randomUUID();
+        
+        // Формируем чек (54-ФЗ)
+        let items = [];
+        try { items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items; } catch(e) {}
+        
+        const receiptItems = items.map(item => ({
+            description: item.name.substring(0, 128),
+            quantity: String(item.quantity),
+            amount: { value: Number(item.price).toFixed(2), currency: 'RUB' },
+            vat_code: 1, // 1 = без НДС
+            payment_subject: 'commodity',
+            payment_mode: 'full_payment'
+        }));
+
         const payload = {
             amount: { value: Number(order.total).toFixed(2), currency: 'RUB' },
             capture: true,
             confirmation: { type: 'redirect', return_url: `${host}/payment.html?orderId=${order.id}` },
             description: `Заказ №${order.id} — DropFlow`,
-            metadata: { order_id: String(order.id) }
+            metadata: { order_id: String(order.id) },
+            receipt: {
+                customer: { 
+                    email: order.email || 'guest@dropflow.ru',
+                    phone: order.phone
+                },
+                items: receiptItems
+            }
         };
+
         const resp = await axios.post('https://api.yookassa.ru/v3/payments', payload, {
             auth: { username: shopId, password: secretKey },
             headers: { 'Idempotence-Key': idempKey, 'Content-Type': 'application/json' }
@@ -356,21 +410,33 @@ app.post('/api/pay', orderLimiter, async (req, res) => {
     }
 });
 
-// Шаг 2: вебхук от ЮKassa — подтверждение оплаты
+// Шаг 2: вебхук от ЮKassa (Пункт 1: Проверка подлинности)
 app.post('/api/yookassa/webhook', express.json({ type: '*/*' }), async (req, res) => {
     try {
         const event = req.body;
-        if (event.event === 'payment.succeeded' && event.object) {
-            const paymentId = event.object.id;
-            const orderId = event.object.metadata && event.object.metadata.order_id;
-            if (orderId) {
-                await db.query(`UPDATE orders SET payment_status='paid' WHERE id=$1 AND (yookassa_payment_id=$2 OR yookassa_payment_id IS NULL)`, [orderId, paymentId]);
-                await tgNotify(`✅ Заказ №${orderId} — оплата подтверждена ЮKassa`);
-            }
-        } else if (event.event === 'payment.canceled' && event.object) {
-            const orderId = event.object.metadata && event.object.metadata.order_id;
-            if (orderId) await db.query(`UPDATE orders SET payment_status='canceled' WHERE id=$1`, [orderId]);
+        if (!event.object || !event.object.id) return res.status(400).send('Bad Request');
+
+        const paymentId = event.object.id;
+        const orderId = event.object.metadata && event.object.metadata.order_id;
+
+        // Проверяем подлинность: делаем запрос к API ЮKassa
+        const shopId = process.env.YOOKASSA_SHOP_ID;
+        const secretKey = process.env.YOOKASSA_SECRET_KEY;
+        if (!shopId || !secretKey) return res.status(500).send('Config Error');
+
+        const check = await axios.get(`https://api.yookassa.ru/v3/payments/${paymentId}`, {
+            auth: { username: shopId, password: secretKey }
+        });
+        
+        const realPayment = check.data;
+
+        if (realPayment.status === 'succeeded' && orderId) {
+            await db.query(`UPDATE orders SET payment_status='paid' WHERE id=$1 AND (yookassa_payment_id=$2 OR yookassa_payment_id IS NULL)`, [orderId, paymentId]);
+            await tgNotify(`✅ Заказ №${orderId} — оплата подтверждена ЮKassa`);
+        } else if (realPayment.status === 'canceled' && orderId) {
+            await db.query(`UPDATE orders SET payment_status='canceled' WHERE id=$1`, [orderId]);
         }
+        
         res.status(200).send('ok');
     } catch (err) {
         console.error('Webhook error:', err.message);
@@ -378,7 +444,6 @@ app.post('/api/yookassa/webhook', express.json({ type: '*/*' }), async (req, res
     }
 });
 
-// Статус заказа для страницы payment.html
 app.get('/api/payment-status/:orderId', async (req, res) => {
     try {
         const r = await db.query('SELECT id, total, status, payment_status FROM orders WHERE id = $1', [req.params.orderId]);
@@ -387,7 +452,7 @@ app.get('/api/payment-status/:orderId', async (req, res) => {
     } catch (err) { res.status(500).json({ success: false }); }
 });
 
-// ================= ТОЧКИ ВЫДАЧИ СДЭК =================
+// ================= ТОЧКИ ВЫДАЧИ =================
 
 app.get('/api/pickup', async (req, res) => {
     try {
@@ -405,7 +470,6 @@ app.post('/api/pickup', requireAdmin, async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Массовая загрузка: { items: [...] } или { text: "Город;Название;Адрес;ш;д ..." }
 app.post('/api/pickup/bulk', requireAdmin, async (req, res) => {
     try {
         let items = req.body.items || [];
@@ -432,9 +496,8 @@ app.delete('/api/pickup/:id', requireAdmin, async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ================= КОММЕНТАРИИ (с премодерацией) =================
+// ================= КОММЕНТАРИИ =================
 
-// Опубликованные комментарии
 app.get('/api/comments', async (req, res) => {
     try {
         const productId = req.query.productId;
@@ -445,7 +508,6 @@ app.get('/api/comments', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Новый комментарий от клиента (попадает на модерацию)
 app.post('/api/comments', requireUser, [
     body('text').trim().isLength({ min: 3, max: 1000 }).withMessage('Комментарий 3–1000 символов')
 ], async (req, res) => {
@@ -459,7 +521,6 @@ app.post('/api/comments', requireUser, [
     } catch (err) { res.status(500).json({ success: false, error: 'Ошибка сервера' }); }
 });
 
-// Очередь модерации
 app.get('/api/comments/pending', requireAdmin, async (req, res) => {
     try {
         const r = await db.query(`SELECT c.*, p.name AS product_name FROM comments c LEFT JOIN products p ON p.id = c.product_id WHERE c.approved = false ORDER BY c.id DESC`);
@@ -467,7 +528,6 @@ app.get('/api/comments/pending', requireAdmin, async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Одобрить / отклонить
 app.post('/api/comments/moderate', requireAdmin, async (req, res) => {
     try {
         const { id, action } = req.body;
@@ -477,7 +537,7 @@ app.post('/api/comments/moderate', requireAdmin, async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ================= ПОЛЬЗОВАТЕЛИ (для админки) =================
+// ================= ПОЛЬЗОВАТЕЛИ =================
 
 app.get('/api/users', requireAdmin, async (req, res) => {
     try {
@@ -488,7 +548,6 @@ app.get('/api/users', requireAdmin, async (req, res) => {
 
 // ================= ОБРАБОТЧИК ОШИБОК =================
 
-// Ошибки multer и прочие — в формате JSON, чтобы клиент мог их показать
 app.use((err, req, res, next) => {
     console.error('Ошибка запроса:', err.message);
     if (err.code === 'LIMIT_FILE_SIZE') return res.status(400).json({ success: false, error: 'Файл больше 5 МБ' });

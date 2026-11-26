@@ -31,10 +31,13 @@ async function initDB() {
                 "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         `);
-        // добавляем недостающие колонки в существующую таблицу (для старой базы)
         await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_status VARCHAR(50) DEFAULT 'pending'`);
         await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS user_login VARCHAR(100)`);
         await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS yookassa_payment_id VARCHAR(255)`);
+        
+        // Индексы для заказов
+        await pool.query(`CREATE INDEX IF NOT EXISTS idx_orders_user_login ON orders(user_login)`);
+        await pool.query(`CREATE INDEX IF NOT EXISTS idx_orders_created_at ON orders("createdAt")`);
 
         // ТОВАРЫ
         await pool.query(`
@@ -52,6 +55,9 @@ async function initDB() {
                 reviews JSONB DEFAULT '[]'
             );
         `);
+        // Индексы для товаров
+        await pool.query(`CREATE INDEX IF NOT EXISTS idx_products_category ON products(category)`);
+        await pool.query(`CREATE INDEX IF NOT EXISTS idx_products_hidden ON products(hidden)`);
 
         // КАТЕГОРИИ
         await pool.query(`
@@ -74,7 +80,9 @@ async function initDB() {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         `);
-        // Если админа ещё нет — создаём (пароль потом смените в базе или через код)
+        // Индекс для пользователей
+        await pool.query(`CREATE INDEX IF NOT EXISTS idx_users_login ON users(login)`);
+
         const adminCheck = await pool.query(`SELECT id FROM users WHERE login = 'admin'`);
         if (adminCheck.rows.length === 0) {
             const bcrypt = require('bcrypt');
@@ -96,13 +104,12 @@ async function initDB() {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         `);
-        // Дефолтные промокоды, если таблица пуста
         const promoCount = await pool.query(`SELECT COUNT(*) FROM promos`);
         if (Number(promoCount.rows[0].count) === 0) {
             await pool.query(`INSERT INTO promos (code, type, value) VALUES ('WELCOME10','percent',10), ('FLOW500','fixed',500) ON CONFLICT DO NOTHING`);
         }
 
-        // СТРАНИЦЫ (тексты разделов: о нас, политика, оферта и т.д.)
+        // СТРАНИЦЫ
         await pool.query(`
             CREATE TABLE IF NOT EXISTS pages (
                 key VARCHAR(50) PRIMARY KEY,
@@ -110,7 +117,7 @@ async function initDB() {
             );
         `);
 
-        // НАСТРОЙКИ (контакты, юр. данные, баннер)
+        // НАСТРОЙКИ
         await pool.query(`
             CREATE TABLE IF NOT EXISTS settings (
                 key VARCHAR(100) PRIMARY KEY,
@@ -130,8 +137,9 @@ async function initDB() {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         `);
+        await pool.query(`CREATE INDEX IF NOT EXISTS idx_pickup_city ON pickup_points(city)`);
 
-        // КОММЕНТАРИИ (с премодерацией)
+        // КОММЕНТАРИИ
         await pool.query(`
             CREATE TABLE IF NOT EXISTS comments (
                 id SERIAL PRIMARY KEY,
@@ -143,8 +151,10 @@ async function initDB() {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         `);
+        await pool.query(`CREATE INDEX IF NOT EXISTS idx_comments_product ON comments(product_id)`);
+        await pool.query(`CREATE INDEX IF NOT EXISTS idx_comments_approved ON comments(approved)`);
 
-        console.log('✅ Таблицы в PostgreSQL успешно проверены/созданы.');
+        console.log('✅ Таблицы в PostgreSQL успешно проверены/созданы (с индексами).');
     } catch (err) {
         console.error('❌ Ошибка инициализации базы данных:', err);
     }

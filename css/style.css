@@ -570,3 +570,99 @@ section { padding: 90px 0; }
 
 /* Принудительное скрытие */
 form[hidden], #loginForm[hidden], #registerForm[hidden] { display: none !important; }
+/* ===== ДОБАВЛЕНО ДЛЯ ПРАВОК ===== */
+
+/* 15. Кнопка показа пароля в логине */
+.password-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+.password-wrapper .input {
+    padding-right: 40px; /* место под кнопку */
+}
+.toggle-password {
+    position: absolute;
+    right: 12px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-2);
+    font-size: 18px;
+    transition: color 0.2s;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.toggle-password:hover {
+    color: var(--accent);
+}
+
+/* 17. Анимация печатающегося текста в Hero */
+.hero-dynamic-text {
+    display: inline-block;
+    color: var(--accent);
+    font-weight: 600;
+    border-right: 2px solid var(--accent);
+    animation: blink-caret 0.75s step-end infinite;
+    white-space: nowrap;
+    overflow: hidden;
+}
+@keyframes blink-caret {
+    from, to { border-color: transparent; }
+    50% { border-color: var(--accent); }
+}
+
+/* 6. Отзывы в карточке товара (быстрый просмотр) */
+.reviews-list {
+    margin-top: 20px;
+    border-top: 1px solid var(--border);
+    padding-top: 15px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+.review-item {
+    margin-bottom: 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px dashed var(--border);
+}
+.review-item:last-child {
+    border-bottom: none;
+}
+.review-author {
+    font-weight: 600;
+    color: var(--accent);
+    font-size: 14px;
+}
+.review-text {
+    color: var(--text-2);
+    font-size: 13px;
+    margin-top: 4px;
+    line-height: 1.4;
+}
+
+/* 13. Логотип во вкладке (если используется через CSS) */
+/* (Убедитесь, что в HTML добавлен <link rel="icon" href="images/favicon.png">) */
+
+/* 14. Стили для кнопок удаления картинок в настройках админки */
+.img-settings-row {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+.img-settings-row .btn-delete-img {
+    background: rgba(255, 80, 80, 0.1);
+    color: #ff6b6b;
+    border: 1px solid #ff6b6b;
+    padding: 8px 14px;
+    border-radius: var(--r-sm);
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.2s;
+}
+.img-settings-row .btn-delete-img:hover {
+    background: #ff6b6b;
+    color: #fff;
+}

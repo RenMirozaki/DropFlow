@@ -4,8 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Оплата — DropFlow</title>
+    <!-- 13. Логотип во вкладке (favicon) -->
+    <link rel="icon" type="image/png" href="images/favicon.png">
     <link rel="stylesheet" href="css/style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600&display=swap" rel="stylesheet">
 </head>
 <body class="auth-page">
     <a href="index.html" class="auth-back">← Вернуться в магазин</a>
@@ -13,6 +15,7 @@
     <div class="auth-wrap" style="grid-template-columns:1fr; max-width:560px;">
         <div class="auth-card">
             <div class="auth-logo">
+                <!-- 8. Возвращен старый логотип -->
                 <svg width="48" height="48" viewBox="0 0 36 36" fill="none">
                     <rect x="1" y="1" width="34" height="34" stroke="#e8b06a" stroke-width="2"/>
                     <path d="M10 22 L18 10 L26 22 Z" fill="#e8b06a"/>
@@ -46,15 +49,25 @@
         const box = document.getElementById('payStatus');
         const params = new URLSearchParams(window.location.search);
         const orderId = params.get('orderId');
+        let pollInterval = null;
 
         function render(o) {
             if (!o) { box.innerHTML = '<p style="color:var(--danger);">Заказ не найден</p>'; return; }
+            
             const payLabels = {
                 'pending': ['⏳ Оплата не завершена', 'Оплатите заказ — обычно это занимает пару минут.'],
                 'paid': ['✅ Заказ оплачен!', 'Спасибо за покупку! Мы уже приступили к сборке и свяжемся с вами.'],
                 'canceled': ['❌ Оплата отменена', 'Платёж был отменён. Вы можете оформить заказ заново.']
             };
             const [title, sub] = payLabels[o.payment_status] || ['Статус неизвестен', ''];
+
+            // 4. Автоочистка корзины при успешной оплате
+            if (o.payment_status === 'paid') {
+                Store.setCart([]); // Очищаем локальную корзину
+                const cartCount = document.getElementById('cartCount');
+                if (cartCount) cartCount.textContent = '0'; // Обнуляем бейдж, если он есть
+            }
+
             box.innerHTML = `
                 <h2 style="color:#fff; margin-bottom:10px;">Заказ №${o.id}</h2>
                 <div style="font-size:28px; color:var(--accent); font-weight:600; margin-bottom:8px;">${DFUtil.formatPrice(o.total)}</div>
@@ -70,12 +83,27 @@
                 const res = await fetch('/api/payment-status/' + orderId);
                 const data = await res.json();
                 render(data.order);
+                
+                // 5. Автоопрос: если оплачен или отменён — прекращаем
+                if (data.order && (data.order.payment_status === 'paid' || data.order.payment_status === 'canceled')) {
+                    if (pollInterval) {
+                        clearInterval(pollInterval);
+                        pollInterval = null;
+                    }
+                }
             } catch (e) {
                 box.innerHTML = '<p style="color:var(--danger);">Ошибка загрузки статуса</p>';
             }
         }
 
+        // Запускаем первую проверку
         check();
+
+        // 5. Запускаем автообновление каждые 3 секунды
+        if (orderId) {
+            pollInterval = setInterval(check, 3000);
+        }
+
         document.getElementById('checkAgainBtn').addEventListener('click', check);
     });
 </script>

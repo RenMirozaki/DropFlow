@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Вход — DropFlow</title>
+    <!-- 13. Логотип во вкладке (favicon) -->
+    <link rel="icon" type="image/png" href="images/favicon.png">
     <link rel="stylesheet" href="css/style.css">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600&display=swap" rel="stylesheet">
 </head>
@@ -14,6 +16,7 @@
         <!-- ===== ФОРМА ===== -->
         <div class="auth-card">
             <div class="auth-logo">
+                <!-- 8. Возвращен старый логотип -->
                 <svg width="48" height="48" viewBox="0 0 36 36" fill="none">
                     <rect x="1" y="1" width="34" height="34" stroke="#e8b06a" stroke-width="2"/>
                     <path d="M10 22 L18 10 L26 22 Z" fill="#e8b06a"/>
@@ -37,7 +40,11 @@
                 </div>
                 <div class="form-row">
                     <label>Пароль</label>
-                    <input type="password" name="password" class="input" required autocomplete="current-password">
+                    <!-- 15. Обертка для кнопки показа пароля -->
+                    <div class="password-wrapper">
+                        <input type="password" name="password" id="loginPassword" class="input" required autocomplete="current-password">
+                        <button type="button" class="toggle-password" data-target="loginPassword" title="Показать пароль">👁</button>
+                    </div>
                 </div>
                 <button type="submit" class="btn-accent big full">Войти</button>
             </form>
@@ -64,7 +71,11 @@
                 </div>
                 <div class="form-row">
                     <label>Пароль * <small>минимум 6 символов</small></label>
-                    <input type="password" name="password" class="input" required minlength="6" autocomplete="new-password">
+                    <!-- 15. Обертка для кнопки показа пароля -->
+                    <div class="password-wrapper">
+                        <input type="password" name="password" id="regPassword" class="input" required minlength="6" autocomplete="new-password">
+                        <button type="button" class="toggle-password" data-target="regPassword" title="Показать пароль">👁</button>
+                    </div>
                 </div>
                 <button type="submit" class="btn-accent big full">Создать аккаунт</button>
             </form>
@@ -119,6 +130,25 @@
 
         tabLogin.addEventListener('click', () => switchTab(true));
         tabRegister.addEventListener('click', () => switchTab(false));
+
+        // 15. Логика кнопки "Показать пароль"
+        document.querySelectorAll('.toggle-password').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const targetId = btn.dataset.target;
+                const input = document.getElementById(targetId);
+                if (input) {
+                    if (input.type === 'password') {
+                        input.type = 'text';
+                        btn.textContent = '🙈'; // Иконка "закрыть"
+                        btn.title = 'Скрыть пароль';
+                    } else {
+                        input.type = 'password';
+                        btn.textContent = '👁'; // Иконка "открыть"
+                        btn.title = 'Показать пароль';
+                    }
+                }
+            });
+        });
 
         loginForm.addEventListener('submit', async e => {
             e.preventDefault();

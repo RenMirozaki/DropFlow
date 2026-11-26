@@ -59,6 +59,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const reviewProduct = document.getElementById('reviewProduct');
     const reviewText = document.getElementById('reviewText');
     const reviewSubmit = document.getElementById('reviewSubmit');
+    const typewriterText = document.getElementById('typewriterText');
 
     let allProducts = [];
     let cart = Store.getCart();
@@ -77,13 +78,52 @@ document.addEventListener('DOMContentLoaded', async () => {
         updateCartUI();
         updateFavUI();
         updateAuthUI();
-        startTypewriter();
+        startTypewriter(); // 17. Запуск анимации
         initProfileTabs();
         renderBanner();
         applyHeroBackground();
         renderFooter();
         renderAbout();
         renderStaticPages();
+    }
+
+    // ===== 17. АНИМАЦИЯ ПЕЧАТАЮЩЕГО ТЕКСТА =====
+    function startTypewriter() {
+        if (!typewriterText) return;
+        const words = ['уютнее', 'комфортнее', 'живее', 'теплее', 'роднее'];
+        let wordIndex = 0;
+        let charIndex = 0;
+        let isDeleting = false;
+        let currentText = '';
+
+        function type() {
+            const currentWord = words[wordIndex];
+            
+            if (isDeleting) {
+                currentText = currentWord.substring(0, charIndex - 1);
+                charIndex--;
+            } else {
+                currentText = currentWord.substring(0, charIndex + 1);
+                charIndex++;
+            }
+
+            typewriterText.textContent = currentText;
+
+            let typeSpeed = isDeleting ? 50 : 100;
+
+            if (!isDeleting && charIndex === currentWord.length) {
+                typeSpeed = 2000; // Пауза перед удалением
+                isDeleting = true;
+            } else if (isDeleting && charIndex === 0) {
+                isDeleting = false;
+                wordIndex = (wordIndex + 1) % words.length;
+                typeSpeed = 500; // Пауза перед новым словом
+            }
+
+            setTimeout(type, typeSpeed);
+        }
+
+        type();
     }
 
     // ===== БАННЕР И ФОН =====
@@ -273,7 +313,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (closeCartBtn) closeCartBtn.addEventListener('click', closeCart);
     if (cartOverlay) cartOverlay.addEventListener('click', closeCart);
 
-    // ===== ПРОМОКОД (проверка на сервере) =====
+    // ===== ПРОМОКОД =====
     if (applyPromoBtn) {
         applyPromoBtn.addEventListener('click', async () => {
             if (!promoInput) return;
@@ -336,11 +376,30 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (favBtn) favBtn.addEventListener('click', () => { if (favPanel) favPanel.classList.add('open'); if (cartOverlay) cartOverlay.classList.add('active'); });
     if (closeFavBtn) closeFavBtn.addEventListener('click', closeCart);
 
-    // ===== БЫСТРЫЙ ПРОСМОТР =====
-    function openQuickView(id) {
+    // ===== БЫСТРЫЙ ПРОСМОТР (с отзывами) =====
+    async function openQuickView(id) {
         const p = allProducts.find(x => x.id === id);
         if (!p || !quickViewBody) return;
         const hasOld = p.old_price && p.old_price > p.price;
+        
+        // 6. Загружаем отзывы
+        let reviewsHtml = '<p style="color:var(--text-3); font-size:13px; margin-top:10px;">Отзывов пока нет.</p>';
+        try {
+            const res = await fetch(`/api/comments?productId=${id}`);
+            const reviews = await res.json();
+            if (reviews.length > 0) {
+                reviewsHtml = `<div class="reviews-list">
+                    <h4 style="font-size:14px; margin-bottom:8px; color:var(--accent);">Отзывы (${reviews.length})</h4>
+                    ${reviews.map(r => `
+                        <div class="review-item">
+                            <div class="review-author">${DFUtil.escapeHtml(r.user_name)}</div>
+                            <div class="review-text">${DFUtil.escapeHtml(r.text)}</div>
+                        </div>
+                    `).join('')}
+                </div>`;
+            }
+        } catch(e) { console.error('Ошибка отзывов', e); }
+
         quickViewBody.innerHTML = `
             <div class="qv-grid">
                 <div class="qv-image"><img src="${DFUtil.escapeHtml(p.image)}" alt="${DFUtil.escapeHtml(p.name)}"></div>
@@ -351,6 +410,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <div class="qv-actions">
                         <button class="btn-accent big" data-qv-add="${p.id}">В корзину</button>
                     </div>
+                    ${reviewsHtml}
                 </div>
             </div>
         `;
@@ -362,7 +422,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ===== ОФОРМЛЕНИЕ ЗАКАЗА =====
     if (checkoutBtn) checkoutBtn.addEventListener('click', () => {
         if (cart.length === 0) return;
-        // Подставляем данные из профиля
         const u = Auth.current();
         if (u) {
             const nameField = checkoutForm.querySelector('[name=name]');
@@ -377,7 +436,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
     if (closeCheckout) closeCheckout.addEventListener('click', () => checkoutModal.classList.remove('open'));
 
-    // Переключение «пункт выдачи / адрес»
     if (deliveryType) deliveryType.addEventListener('change', () => {
         const isPickup = deliveryType.value === 'pickup';
         pickupRow.style.display = isPickup ? 'block' : 'none';
@@ -420,7 +478,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (pickPickupBtn) pickPickupBtn.addEventListener('click', async () => {
         pickupModal.classList.add('open');
         await loadPickupPoints();
-        // Показываем карту по первой точке с координатами
         const withCoords = pickupPoints.find(p => p.lat && p.lng);
         if (withCoords) {
             pickupMapWrap.style.display = 'block';
@@ -432,16 +489,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (pickupSearch) pickupSearch.addEventListener('input', renderPickupList);
     document.querySelectorAll('[data-close]').forEach(btn => btn.addEventListener('click', () => document.getElementById(btn.dataset.close).classList.remove('open')));
 
-    // ===== ОПЛАТА: создать заказ, потом платёж ЮKassa =====
+    // ===== ОПЛАТА (Совместимость с сервером) =====
     if (payBtn) {
         payBtn.addEventListener('click', async () => {
             if (!checkoutForm.checkValidity()) { checkoutForm.reportValidity(); return; }
             const isPickup = !deliveryType || deliveryType.value === 'pickup';
             if (isPickup && !selectedPickup) { DFUtil.toast('Выберите пункт выдачи', 'warning'); return; }
             if (!isPickup && !addressInput.value.trim()) { DFUtil.toast('Укажите адрес доставки', 'warning'); return; }
-
-            const { total } = calcTotals();
-            if (total < 1) { DFUtil.toast('Сумма заказа некорректна', 'error'); return; }
 
             const fd = new FormData(checkoutForm);
             const address = isPickup
@@ -452,7 +506,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             payBtn.textContent = 'Создаём заказ...';
 
             try {
-                // 1. Сохраняем заказ
+                // 1. Сохраняем заказ (теперь без total, сервер сам посчитает)
                 const orderRes = await fetch('/api/order', {
                     method: 'POST',
                     headers: Object.assign({ 'Content-Type': 'application/json' }, Store.authHeaders()),
@@ -463,7 +517,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         address,
                         comment: fd.get('comment') || '',
                         items: cart,
-                        total
+                        promoCode: appliedPromo ? appliedPromo.code : null
                     })
                 });
                 const orderData = await orderRes.json();
@@ -499,7 +553,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // ===== СТРАНИЦЫ ИЗ ПОДВАЛА / ФОРМ =====
+    // ===== СТРАНИЦЫ =====
     function openPage(key) {
         let html = Store.getPages()[key] || '<p>Страница не найдена</p>';
         if (key === 'contacts') {
@@ -519,9 +573,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
     if (closePage) closePage.addEventListener('click', () => pageModal.classList.remove('open'));
 
-    function renderStaticPages() {
-        // наполнение страниц по умолчанию — делает админка, тут ничего дополнительно не нужно
-    }
+    function renderStaticPages() {}
 
     // ===== ЛИЧНЫЙ КАБИНЕТ =====
     function updateAuthUI() {
@@ -577,15 +629,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     async function loadProfileData() {
         const user = Auth.current();
         if (!user) return;
-
-        // Данные профиля
         const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
         set('profName', user.name);
         set('profLogin', user.login);
         set('profEmail', user.email);
         set('profPhone', user.phone);
 
-        // Мои заказы — только этого пользователя (по токену)
         const ordersList = document.getElementById('myOrdersList');
         ordersList.innerHTML = '<p>Загрузка...</p>';
         try {
@@ -608,21 +657,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // ===== ПРОЧЕЕ =====
-    function startTypewriter() {
-        const heroTitle = document.getElementById('heroTitle');
-        if (!heroTitle) return;
-        const text = 'DROPFLOW';
-        let i = 0;
-        heroTitle.textContent = '';
-        const timer = setInterval(() => {
-            heroTitle.textContent = text.slice(0, ++i);
-            if (i >= text.length) clearInterval(timer);
-        }, 90);
-    }
-
     if (toTop) toTop.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
 
-    // Бургер-меню
     const burgerBtn = document.getElementById('burgerBtn');
     const mobileMenu = document.getElementById('mobileMenu');
     if (burgerBtn && mobileMenu) {

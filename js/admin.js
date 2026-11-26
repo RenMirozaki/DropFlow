@@ -63,7 +63,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         userName.textContent = 'Администратор';
 
-        if (logoutBtn) logoutBtn.addEventListener('click', () => { if (confirm('Выйти?')) { Auth.logout(); window.location.href = 'index.html'; } });
+        if (logoutBtn) logoutBtn.addEventListener('click', () => { if (confirm('Выйти?')) { Auth.logout(); window.location.href = 'login.html'; } });
 
         // Универсальный запрос к API с токеном
         async function api(url, options = {}) {
@@ -116,9 +116,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // === КАТЕГОРИИ ===
         function updateCategoriesSelect() {
             const select = document.getElementById('productCategorySelect');
-            const list = document.getElementById('categoriesList');
             if (select) select.innerHTML = categories.map(c => `<option value="${DFUtil.escapeHtml(c.name)}">${DFUtil.escapeHtml(c.name)}</option>`).join('');
-            if (list) list.innerHTML = categories.map(c => `<option value="${DFUtil.escapeHtml(c.name)}">${DFUtil.escapeHtml(c.name)}</option>`).join('');
         }
 
         function renderCategoriesList() {
@@ -228,7 +226,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        // Загрузка фото товара на сервер (со сжатием)
         const imageFileInput = document.getElementById('imageFile');
         if (imageFileInput) {
             imageFileInput.addEventListener('change', async (e) => {
@@ -267,7 +264,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     description: fd.get('description').trim(),
                     hidden: false
                 };
-                // при редактировании сохраняем текущий hidden
                 const existing = products.find(p => p.id === data.id);
                 if (existing) data.hidden = existing.hidden;
                 await api('/api/products', { method: 'POST', body: JSON.stringify(data) });
@@ -378,11 +374,46 @@ document.addEventListener('DOMContentLoaded', () => {
             `).join('');
         }
 
+        // === 14. УДАЛЕНИЕ КАРТИНОК (Настройки и Страницы) ===
+        function updateDeleteImageButtons() {
+            const s = Store.getSettings();
+            // Баннер
+            const bannerBtn = document.querySelector('[data-delete-img="bannerImage"]');
+            if (bannerBtn) bannerBtn.style.display = s.bannerImage ? 'inline-block' : 'none';
+            // Фон Hero
+            const heroBtn = document.querySelector('[data-delete-img="heroImage"]');
+            if (heroBtn) heroBtn.style.display = s.heroImage ? 'inline-block' : 'none';
+            // Фото О нас
+            const aboutBtn = document.querySelector('[data-delete-img="aboutImage"]');
+            if (aboutBtn) aboutBtn.style.display = s.aboutImage ? 'inline-block' : 'none';
+        }
+
+        // Обработчики удаления
+        document.querySelectorAll('[data-delete-img]').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const key = btn.dataset.deleteImg;
+                if (!confirm('Удалить изображение? Это действие нельзя отменить.')) return;
+                
+                const s = Store.getSettings();
+                s[key] = ''; // Очищаем ключ
+                await Store.saveSettings(s);
+                
+                // Обновляем UI
+                if (key === 'bannerImage') document.getElementById('bannerImageName').textContent = '';
+                if (key === 'heroImage') document.getElementById('heroImageName').textContent = '';
+                if (key === 'aboutImage') document.getElementById('aboutImageName').textContent = '';
+                
+                updateDeleteImageButtons();
+                DFUtil.toast('Изображение удалено', 'success');
+            });
+        });
+
         // === БАННЕР (картинка с текстом) ===
         function loadBanner() {
             const s = Store.getSettings();
             const el = document.getElementById('bannerImageName');
             if (el) el.textContent = s.bannerImage ? 'Загружено ✓' : '';
+            updateDeleteImageButtons(); // Обновляем кнопки удаления
         }
 
         const bannerFileInput = document.getElementById('bannerImage');
@@ -398,6 +429,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         s.bannerImage = data.url;
                         await Store.saveSettings(s);
                         document.getElementById('bannerImageName').textContent = 'Загружено ✓';
+                        updateDeleteImageButtons(); // Обновляем кнопки удаления
                         DFUtil.toast('Баннер обновлён', 'success');
                     } else DFUtil.toast(data.error || 'Ошибка загрузки', 'error');
                 } catch (err) {
@@ -427,6 +459,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         s[cfg.key] = data.url;
                         await Store.saveSettings(s);
                         if (label) label.textContent = 'Загружено ✓';
+                        updateDeleteImageButtons(); // Обновляем кнопки удаления
                         DFUtil.toast('Фон обновлён', 'success');
                     } else DFUtil.toast(data.error || 'Ошибка загрузки', 'error');
                 } catch (err) {
