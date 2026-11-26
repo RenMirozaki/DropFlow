@@ -321,6 +321,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <p>📧 ${DFUtil.escapeHtml(o.email || '—')}</p>
                 <p>📍 ${DFUtil.escapeHtml(o.address)}</p>
                 <p>💳 ${o.payment_status === 'paid' ? 'Оплачен' : 'Не оплачен'} · ${DFUtil.formatPrice(o.total)}</p>
+                ${o.comment ? `<p style="color:var(--text-2);">💬 ${DFUtil.escapeHtml(o.comment)}</p>` : ''}
                 <div style="border-top:1px solid var(--border); margin:14px 0; padding-top:14px;">
                     ${items.map(i => `<div style="display:flex; justify-content:space-between; padding:4px 0;"><span>${DFUtil.escapeHtml(i.name)} × ${i.quantity}</span><b>${DFUtil.formatPrice(i.price * i.quantity)}</b></div>`).join('')}
                 </div>
