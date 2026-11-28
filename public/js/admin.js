@@ -172,8 +172,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         <h3 class="product-name">${DFUtil.escapeHtml(p.name)}</h3>
                         <div class="product-price-row"><span class="product-price">${DFUtil.formatPrice(p.price)}</span></div>
                         <div style="display:flex; gap:5px; margin-top:10px;">
-                            <button class="btn-ghost" onclick="editProduct(${p.id})" style="flex:1; font-size:11px;">Ред.</button>
-                            <button class="btn-ghost" onclick="deleteProduct(${p.id})" style="flex:1; font-size:11px; color:var(--danger);">Удал.</button>
+                            <button class="btn-ghost" data-edit="${p.id}" style="flex:1; font-size:11px;">Ред.</button>
+                            <button class="btn-ghost" data-delete="${p.id}" style="flex:1; font-size:11px; color:var(--danger);">Удал.</button>
                         </div>
                     </div>
                 </div>
@@ -191,28 +191,35 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             });
 
-            window.editProduct = (id) => {
-                const p = products.find(x => x.id === id);
-                if (!p) return;
-                productForm.id.value = p.id;
-                productForm.name.value = p.name;
-                productForm.category.value = p.category;
-                productForm.price.value = p.price;
-                productForm.oldPrice.value = p.old_price || '';
-                productForm.rating.value = p.rating || 5;
-                productForm.popular.value = p.popular ? 'yes' : 'no';
-                document.getElementById('imagePath').value = p.image || '';
-                document.getElementById('imageFileName').textContent = p.image ? 'Загружено' : '';
-                productForm.description.value = p.description || '';
-                productModalTitle.textContent = 'Редактирование';
-                productModal.classList.add('open');
-            };
-            window.deleteProduct = async (id) => {
-                if (!confirm('Удалить товар?')) return;
-                await api('/api/products/' + id, { method: 'DELETE' });
-                await loadData();
-                DFUtil.toast('Товар удалён', 'success');
-            };
+            // Редактирование и удаление через data-атрибуты (без inline onclick)
+            container.querySelectorAll('[data-edit]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const id = Number(btn.dataset.edit);
+                    const p = products.find(x => x.id === id);
+                    if (!p) return;
+                    productForm.id.value = p.id;
+                    productForm.name.value = p.name;
+                    productForm.category.value = p.category;
+                    productForm.price.value = p.price;
+                    productForm.oldPrice.value = p.old_price || '';
+                    productForm.rating.value = p.rating || 5;
+                    productForm.popular.value = p.popular ? 'yes' : 'no';
+                    document.getElementById('imagePath').value = p.image || '';
+                    document.getElementById('imageFileName').textContent = p.image ? 'Загружено' : '';
+                    productForm.description.value = p.description || '';
+                    productModalTitle.textContent = 'Редактирование';
+                    productModal.classList.add('open');
+                });
+            });
+
+            container.querySelectorAll('[data-delete]').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    if (!confirm('Удалить товар?')) return;
+                    await api('/api/products/' + btn.dataset.delete, { method: 'DELETE' });
+                    await loadData();
+                    DFUtil.toast('Товар удалён', 'success');
+                });
+            });
         }
 
         if (addProductBtn) {
@@ -374,46 +381,38 @@ document.addEventListener('DOMContentLoaded', () => {
             `).join('');
         }
 
-        // === 14. УДАЛЕНИЕ КАРТИНОК (Настройки и Страницы) ===
+        // === 14. УДАЛЕНИЕ КАРТИНОК ===
         function updateDeleteImageButtons() {
             const s = Store.getSettings();
-            // Баннер
             const bannerBtn = document.querySelector('[data-delete-img="bannerImage"]');
             if (bannerBtn) bannerBtn.style.display = s.bannerImage ? 'inline-block' : 'none';
-            // Фон Hero
             const heroBtn = document.querySelector('[data-delete-img="heroImage"]');
             if (heroBtn) heroBtn.style.display = s.heroImage ? 'inline-block' : 'none';
-            // Фото О нас
             const aboutBtn = document.querySelector('[data-delete-img="aboutImage"]');
             if (aboutBtn) aboutBtn.style.display = s.aboutImage ? 'inline-block' : 'none';
         }
 
-        // Обработчики удаления
         document.querySelectorAll('[data-delete-img]').forEach(btn => {
             btn.addEventListener('click', async () => {
                 const key = btn.dataset.deleteImg;
                 if (!confirm('Удалить изображение? Это действие нельзя отменить.')) return;
-                
                 const s = Store.getSettings();
-                s[key] = ''; // Очищаем ключ
+                s[key] = '';
                 await Store.saveSettings(s);
-                
-                // Обновляем UI
                 if (key === 'bannerImage') document.getElementById('bannerImageName').textContent = '';
                 if (key === 'heroImage') document.getElementById('heroImageName').textContent = '';
                 if (key === 'aboutImage') document.getElementById('aboutImageName').textContent = '';
-                
                 updateDeleteImageButtons();
                 DFUtil.toast('Изображение удалено', 'success');
             });
         });
 
-        // === БАННЕР (картинка с текстом) ===
+        // === БАННЕР ===
         function loadBanner() {
             const s = Store.getSettings();
             const el = document.getElementById('bannerImageName');
             if (el) el.textContent = s.bannerImage ? 'Загружено ✓' : '';
-            updateDeleteImageButtons(); // Обновляем кнопки удаления
+            updateDeleteImageButtons();
         }
 
         const bannerFileInput = document.getElementById('bannerImage');
@@ -429,7 +428,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         s.bannerImage = data.url;
                         await Store.saveSettings(s);
                         document.getElementById('bannerImageName').textContent = 'Загружено ✓';
-                        updateDeleteImageButtons(); // Обновляем кнопки удаления
+                        updateDeleteImageButtons();
                         DFUtil.toast('Баннер обновлён', 'success');
                     } else DFUtil.toast(data.error || 'Ошибка загрузки', 'error');
                 } catch (err) {
@@ -439,7 +438,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        // === ФОНЫ СТРАНИЦ (о нас / hero) ===
+        // === ФОНЫ СТРАНИЦ ===
         const bgInputs = [
             { input: 'editImageAbout', key: 'aboutImage', label: 'aboutImageName' },
             { input: 'editImageHero', key: 'heroImage', label: 'heroImageName' }
@@ -459,7 +458,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         s[cfg.key] = data.url;
                         await Store.saveSettings(s);
                         if (label) label.textContent = 'Загружено ✓';
-                        updateDeleteImageButtons(); // Обновляем кнопки удаления
+                        updateDeleteImageButtons();
                         DFUtil.toast('Фон обновлён', 'success');
                     } else DFUtil.toast(data.error || 'Ошибка загрузки', 'error');
                 } catch (err) {

@@ -15,29 +15,64 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Предупреждение о секрете сессии
+if (!process.env.SESSION_SECRET) {
+    console.warn('⚠️ SESSION_SECRET не задан в .env — токены подписываются дефолтным секретом. Добавь SESSION_SECRET=<случайная длинная строка> в .env и перезапусти сервер.');
+}
+
 app.use(helmet({ contentSecurityPolicy: false }));
 
 const generalLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 300, message: 'Слишком много запросов с вашего IP, попробуйте позже.' });
 app.use('/api/', generalLimiter);
 
+const authLimiter = rateLimit({ windowMs: 10 * 60 * 1000, max: 10, message: 'Слишком много попыток входа или регистрации. Подождите 10 минут.' });
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/register', authLimiter);
+
 const orderLimiter = rateLimit({ windowMs: 10 * 60 * 1000, max: 10, message: 'Слишком много попыток оформления заказа. Подождите немного.' });
 
 app.use(express.json({ limit: '2mb' }));
-app.use(express.static(path.join(__dirname, '/')));
+
+// ================= ЗАЩИТА ЧУВСТВИВЫХ ФАЙЛОВ =================
+// Статика раздаётся ТОЛЬКО из папки public/. Этот блок — страховка:
+// даже если секреты случайно окажутся в public/, они не отдадутся.
+const PUBLIC_DIR = path.join(__dirname, 'public');
+if (!fs.existsSync(PUBLIC_DIR)) fs.mkdirSync(PUBLIC_DIR, { recursive: true });
+
+app.use((req, res, next) => {
+    const p = req.path.toLowerCase();
+    const blocked = ['/\\.env', '/server.js', '/database.js', '/shop.db', '/package.json', '/package-lock.json', '/readme.md'];
+    if (blocked.some(b => p === b || p.startsWith(b)) || p.startsWith('/.git')) {
+        return res.status(403).send('Forbidden');
+    }
+    next();
+});
+
+app.use(express.static(PUBLIC_DIR));
 
 // ================= ХЕЛПЕРЫ =================
 
 const SECRET = process.env.SESSION_SECRET || 'dropflow-change-me';
+const TOKEN_TTL = 30 * 24 * 60 * 60 * 1000; // 30 дней
+
 function signToken(login) {
-    const sig = crypto.createHmac('sha256', SECRET).update(login).digest('hex');
-    return login + '.' + sig;
+    const issuedAt = Date.now();
+    const payload = `${login}.${issuedAt}`;
+    const sig = crypto.createHmac('sha256', SECRET).update(payload).digest('hex');
+    return `${payload}.${sig}`;
 }
 function parseToken(token) {
-    if (!token || !token.includes('.')) return null;
-    const idx = token.lastIndexOf('.');
-    const login = token.slice(0, idx), sig = token.slice(idx + 1);
-    const expect = crypto.createHmac('sha256', SECRET).update(login).digest('hex');
-    return sig === expect ? login : null;
+    if (!token) return null;
+    const parts = String(token).split('.');
+    if (parts.length !== 3) return null;
+    const [login, issuedAt, sig] = parts;
+    const expect = crypto.createHmac('sha256', SECRET).update(`${login}.${issuedAt}`).digest();
+    let given;
+    try { given = Buffer.from(sig, 'hex'); } catch (e) { return null; }
+    if (given.length !== expect.length || !crypto.timingSafeEqual(given, expect)) return null;
+    const ts = Number(issuedAt);
+    if (!ts || Date.now() - ts > TOKEN_TTL) return null;
+    return login;
 }
 function authHeader(req) {
     const h = req.headers['authorization'] || '';
@@ -62,8 +97,8 @@ async function requireUser(req, res, next) {
     next();
 }
 
-// Загрузка файлов
-const imagesDir = path.join(__dirname, 'images');
+// Загрузка файлов (только растровые изображения, без SVG и GIF)
+const imagesDir = path.join(__dirname, 'public', 'images');
 if (!fs.existsSync(imagesDir)) fs.mkdirSync(imagesDir, { recursive: true });
 const storage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, imagesDir),
@@ -76,8 +111,10 @@ const upload = multer({
     storage,
     limits: { fileSize: 5 * 1024 * 1024 },
     fileFilter: (req, file, cb) => {
-        if (/\.(jpe?g|png|gif|webp|svg)$/i.test(file.originalname)) cb(null, true);
-        else cb(new Error('Разрешены только изображения'));
+        const okType = /^image\/(jpe?g|png|webp)$/i.test(file.mimetype || '');
+        const okExt = /\.(jpe?g|png|webp)$/i.test(file.originalname || '');
+        if (okType && okExt) return cb(null, true);
+        cb(new Error('Разрешены только изображения JPEG, PNG или WebP'));
     }
 });
 
@@ -132,6 +169,41 @@ app.get('/api/auth/me', async (req, res) => {
     res.json({ success: true, user: { login: user.login, name: user.name, email: user.email, phone: user.phone, role: user.role } });
 });
 
+// Смена пароля (для личного кабинета)
+app.post('/api/auth/change-password', requireUser, [
+    body('oldPassword').isLength({ min: 6 }).withMessage('Введите текущий пароль'),
+    body('newPassword').isLength({ min: 6 }).withMessage('Новый пароль минимум 6 символов')
+], async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return res.status(400).json({ success: false, error: errors.array()[0].msg });
+    try {
+        const { oldPassword, newPassword } = req.body;
+        const ok = await bcrypt.compare(String(oldPassword || ''), req.user.password_hash);
+        if (!ok) return res.status(400).json({ success: false, error: 'Текущий пароль неверен' });
+        const hash = await bcrypt.hash(newPassword, 10);
+        await db.query('UPDATE users SET password_hash = $1 WHERE id = $2', [hash, req.user.id]);
+        res.json({ success: true });
+    } catch (err) { res.status(500).json({ success: false, error: 'Ошибка сервера' }); }
+});
+
+// Профиль: сохранение имени, email, телефона
+app.post('/api/profile', requireUser, [
+    body('name').trim().isLength({ min: 5 }).withMessage('Укажите ФИО полностью'),
+    body('email').trim().isEmail().withMessage('Некорректный email'),
+    body('phone').trim().isLength({ min: 10 }).withMessage('Укажите телефон')
+], async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return res.status(400).json({ success: false, error: errors.array()[0].msg });
+    try {
+        const { name, email, phone } = req.body;
+        const dup = await db.query('SELECT id FROM users WHERE email = $1 AND id <> $2', [email.toLowerCase(), req.user.id]);
+        if (dup.rows.length) return res.status(400).json({ success: false, error: 'Этот email уже занят' });
+        await db.query('UPDATE users SET name = $1, email = $2, phone = $3 WHERE id = $4',
+            [name, email.toLowerCase(), phone, req.user.id]);
+        res.json({ success: true, user: { login: req.user.login, name, email: email.toLowerCase(), phone, role: req.user.role } });
+    } catch (err) { res.status(500).json({ success: false, error: 'Ошибка сервера' }); }
+});
+
 // ================= ТОВАРЫ =================
 
 app.get('/api/products', async (req, res) => {
@@ -142,15 +214,21 @@ app.get('/api/products', async (req, res) => {
 });
 
 app.post('/api/products', requireAdmin, async (req, res) => {
-    const { id, name, category, price, oldPrice, rating, popular, image, description, hidden } = req.body;
+    const { id, name, category, oldPrice, popular, image, description, hidden } = req.body;
+    // Валидация и нормализация числовых полей
+    const price = Math.max(1, Math.round(Number(req.body.price) || 0));
+    if (!price) return res.status(400).json({ success: false, error: 'Укажите корректную цену' });
+    const rating = Math.min(5, Math.max(0, Number(req.body.rating) || 5));
+    const safeOldPrice = oldPrice === null || oldPrice === undefined || oldPrice === ''
+        ? null : Math.max(0, Math.round(Number(oldPrice) || 0));
     try {
         if (id) {
             await db.query(`UPDATE products SET name=$1, category=$2, price=$3, old_price=$4, rating=$5, popular=$6, image=$7, description=$8, hidden=$9 WHERE id=$10`,
-                [name, category, price, oldPrice, rating, popular, image, description, hidden, id]);
+                [name, category, price, safeOldPrice, rating, popular, image, description, hidden, id]);
         } else {
             await db.query(`INSERT INTO products (name, category, price, old_price, rating, popular, image, description, hidden)
                  VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
-                [name, category, price, oldPrice, rating, popular, image, description, hidden]);
+                [name, category, price, safeOldPrice, rating, popular, image, description, hidden]);
         }
         res.json({ success: true });
     } catch (err) { res.status(500).json({ error: err.message }); }
@@ -214,8 +292,10 @@ app.post('/api/promo/check', async (req, res) => {
 app.post('/api/promos', requireAdmin, async (req, res) => {
     try {
         const { code, type, value } = req.body;
+        if (!['percent', 'fixed'].includes(type)) return res.status(400).json({ success: false, error: 'Неверный тип скидки' });
+        const v = Math.max(0, Math.round(Number(value) || 0));
         await db.query('INSERT INTO promos (code, type, value) VALUES ($1,$2,$3) ON CONFLICT (code) DO UPDATE SET type=$2, value=$3',
-            [String(code).toUpperCase().trim(), type, Number(value)]);
+            [String(code).toUpperCase().trim(), type, v]);
         res.json({ success: true });
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -267,7 +347,6 @@ app.post('/api/settings', requireAdmin, async (req, res) => {
 
 // ================= ЗАКАЗЫ =================
 
-// Пункт 3: Пересчет суммы на сервере
 app.post('/api/order', orderLimiter, [
     body('name').trim().isLength({ min: 3 }).withMessage('Укажите ФИО').matches(/^[а-яА-ЯёЁa-zA-Z\s]+$/).withMessage('ФИО должно содержать только буквы'),
     body('phone').trim().isLength({ min: 10 }).withMessage('Укажите телефон'),
@@ -284,13 +363,14 @@ app.post('/api/order', orderLimiter, [
         // Пересчитываем сумму на основе актуальных цен из БД
         let calculatedTotal = 0;
         const validItems = [];
+        const MAX_QTY = 20; // ограничение на количество одного товара
 
         for (const item of items) {
             const p = await db.query('SELECT id, name, price, image FROM products WHERE id = $1 AND hidden = false', [item.id]);
             if (p.rows.length === 0) return res.status(400).json({ success: false, error: `Товар "${item.name}" больше не доступен` });
-            
+
             const product = p.rows[0];
-            const qty = Math.max(1, Number(item.quantity) || 1);
+            const qty = Math.min(MAX_QTY, Math.max(1, Number(item.quantity) || 1));
             calculatedTotal += product.price * qty;
             validItems.push({
                 id: product.id,
@@ -316,10 +396,10 @@ app.post('/api/order', orderLimiter, [
              VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id`,
             [name, phone, email || (user ? user.email : null), address, comment || null, JSON.stringify(validItems), calculatedTotal, 'active', 'pending', user ? user.login : null]);
         const orderId = result.rows[0].id;
-        
+
         console.log(`🛒 Новый заказ №${orderId} от ${name} на сумму ${calculatedTotal} ₽`);
         await tgNotify(`🛒 *Новый заказ №${orderId}*\n\n👤 ${name}\n📞 ${phone}\n📍 ${address}\n💰 Сумма: ${calculatedTotal} ₽`);
-        
+
         res.status(200).json({ success: true, orderId, total: calculatedTotal });
     } catch (err) {
         console.error('Ошибка сохранения заказа:', err);
@@ -353,7 +433,6 @@ app.post('/api/order/status', requireAdmin, async (req, res) => {
 
 // ================= ЮKASSA =================
 
-// Шаг 1: создать платёж по сохранённому заказу (Пункт 2: Чеки 54-ФЗ)
 app.post('/api/pay', orderLimiter, async (req, res) => {
     try {
         const { orderId } = req.body;
@@ -368,11 +447,10 @@ app.post('/api/pay', orderLimiter, async (req, res) => {
 
         const host = process.env.SITE_URL || `${req.protocol}://${req.get('host')}`;
         const idempKey = crypto.randomUUID();
-        
-        // Формируем чек (54-ФЗ)
+
         let items = [];
         try { items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items; } catch(e) {}
-        
+
         const receiptItems = items.map(item => ({
             description: item.name.substring(0, 128),
             quantity: String(item.quantity),
@@ -389,7 +467,7 @@ app.post('/api/pay', orderLimiter, async (req, res) => {
             description: `Заказ №${order.id} — DropFlow`,
             metadata: { order_id: String(order.id) },
             receipt: {
-                customer: { 
+                customer: {
                     email: order.email || 'guest@dropflow.ru',
                     phone: order.phone
                 },
@@ -410,16 +488,20 @@ app.post('/api/pay', orderLimiter, async (req, res) => {
     }
 });
 
-// Шаг 2: вебхук от ЮKassa (Пункт 1: Проверка подлинности)
+// Вебхук от ЮKassa: реагируем только на нужные события,
+// платёж дополнительно подтверждаем запросом к API,
+// payment_id сверяется строго (без OR NULL).
 app.post('/api/yookassa/webhook', express.json({ type: '*/*' }), async (req, res) => {
     try {
         const event = req.body;
-        if (!event.object || !event.object.id) return res.status(400).send('Bad Request');
+        if (!event || !event.object || !event.object.id) return res.status(400).send('Bad Request');
+        if (event.event !== 'payment.succeeded' && event.event !== 'payment.canceled') {
+            return res.status(200).send('ok'); // событие не для нас — отвечаем успешно
+        }
 
         const paymentId = event.object.id;
         const orderId = event.object.metadata && event.object.metadata.order_id;
 
-        // Проверяем подлинность: делаем запрос к API ЮKassa
         const shopId = process.env.YOOKASSA_SHOP_ID;
         const secretKey = process.env.YOOKASSA_SECRET_KEY;
         if (!shopId || !secretKey) return res.status(500).send('Config Error');
@@ -427,16 +509,16 @@ app.post('/api/yookassa/webhook', express.json({ type: '*/*' }), async (req, res
         const check = await axios.get(`https://api.yookassa.ru/v3/payments/${paymentId}`, {
             auth: { username: shopId, password: secretKey }
         });
-        
+
         const realPayment = check.data;
 
         if (realPayment.status === 'succeeded' && orderId) {
-            await db.query(`UPDATE orders SET payment_status='paid' WHERE id=$1 AND (yookassa_payment_id=$2 OR yookassa_payment_id IS NULL)`, [orderId, paymentId]);
+            await db.query(`UPDATE orders SET payment_status='paid' WHERE id=$1 AND yookassa_payment_id=$2`, [orderId, paymentId]);
             await tgNotify(`✅ Заказ №${orderId} — оплата подтверждена ЮKassa`);
         } else if (realPayment.status === 'canceled' && orderId) {
             await db.query(`UPDATE orders SET payment_status='canceled' WHERE id=$1`, [orderId]);
         }
-        
+
         res.status(200).send('ok');
     } catch (err) {
         console.error('Webhook error:', err.message);
@@ -557,4 +639,5 @@ app.use((err, req, res, next) => {
 
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Сервер запущен на http://localhost:${PORT}`);
+    console.log('📂 Статика раздаётся из папки public/');
 });

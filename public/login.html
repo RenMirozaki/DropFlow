@@ -4,35 +4,37 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Вход — DropFlow</title>
-    <!-- 13. Логотип во вкладке (favicon) -->
-    <link rel="icon" type="image/png" href="images/favicon.png">
+    <link rel="icon" type="image/png" href="images/logo.png">
     <link rel="stylesheet" href="css/style.css">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600&display=swap" rel="stylesheet">
+    <style>
+        /* Принудительное скрытие */
+        .auth-form.hidden {
+            display: none !important;
+        }
+    </style>
 </head>
 <body class="auth-page">
     <a href="index.html" class="auth-back">← Вернуться в магазин</a>
 
     <div class="auth-wrap">
-        <!-- ===== ФОРМА ===== -->
+        <!-- ===== ЛЕВАЯ ЧАСТЬ (ФОРМА) ===== -->
         <div class="auth-card">
             <div class="auth-logo">
-                <!-- 8. Возвращен старый логотип -->
-                <svg width="48" height="48" viewBox="0 0 36 36" fill="none">
-                    <rect x="1" y="1" width="34" height="34" stroke="#e8b06a" stroke-width="2"/>
-                    <path d="M10 22 L18 10 L26 22 Z" fill="#e8b06a"/>
-                </svg>
+                <img src="images/logo.png" alt="DropFlow" width="64" height="64" style="border-radius:10px; margin:0 auto 12px; display:block;">
                 <h1>DROPFLOW</h1>
                 <p class="auth-sub">Личный кабинет</p>
             </div>
 
+            <!-- Переключатель вкладок -->
             <div class="auth-tabs">
-                <button class="auth-tab active" id="tabLogin">Вход</button>
-                <button class="auth-tab" id="tabRegister">Регистрация</button>
+                <button class="auth-tab active" id="tabLogin" type="button">Вход</button>
+                <button class="auth-tab" id="tabRegister" type="button">Регистрация</button>
             </div>
 
             <div class="auth-message" id="authMessage" hidden></div>
 
-            <!-- Вход -->
+            <!-- ФОРМА ВХОДА -->
             <form id="loginForm" class="auth-form form">
                 <div class="form-row">
                     <label>Логин или email</label>
@@ -40,7 +42,6 @@
                 </div>
                 <div class="form-row">
                     <label>Пароль</label>
-                    <!-- 15. Обертка для кнопки показа пароля -->
                     <div class="password-wrapper">
                         <input type="password" name="password" id="loginPassword" class="input" required autocomplete="current-password">
                         <button type="button" class="toggle-password" data-target="loginPassword" title="Показать пароль">👁</button>
@@ -49,8 +50,8 @@
                 <button type="submit" class="btn-accent big full">Войти</button>
             </form>
 
-            <!-- Регистрация -->
-            <form id="registerForm" class="auth-form form" hidden>
+            <!-- ФОРМА РЕГИСТРАЦИИ (скрыта классом hidden) -->
+            <form id="registerForm" class="auth-form form hidden">
                 <div class="form-row">
                     <label>ФИО *</label>
                     <input type="text" name="name" class="input" required placeholder="Иванов Иван Иванович">
@@ -71,7 +72,6 @@
                 </div>
                 <div class="form-row">
                     <label>Пароль * <small>минимум 6 символов</small></label>
-                    <!-- 15. Обертка для кнопки показа пароля -->
                     <div class="password-wrapper">
                         <input type="password" name="password" id="regPassword" class="input" required minlength="6" autocomplete="new-password">
                         <button type="button" class="toggle-password" data-target="regPassword" title="Показать пароль">👁</button>
@@ -80,7 +80,7 @@
                 <button type="submit" class="btn-accent big full">Создать аккаунт</button>
             </form>
 
-            <p class="auth-hint">Регистрируясь, вы соглашаетесь с <a href="index.html">условиями сервиса</a></p>
+            <p class="auth-hint">Регистрируясь, вы соглашаетесь с <a href="#" data-page="offer">условиями сервиса</a></p>
         </div>
 
         <!-- ===== ПРАВАЯ ЧАСТЬ ===== -->
@@ -102,7 +102,7 @@
 <script src="js/auth.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', () => {
-        // Уже вошёл — на главную (или в админку)
+        // Если уже вошли — перенаправляем
         if (Auth.isLoggedIn()) {
             window.location.href = Auth.isAdmin() ? 'admin.html' : 'index.html';
             return;
@@ -123,15 +123,23 @@
         function switchTab(isLogin) {
             tabLogin.classList.toggle('active', isLogin);
             tabRegister.classList.toggle('active', !isLogin);
-            loginForm.hidden = !isLogin;
-            registerForm.hidden = isLogin;
+            
+            // Используем класс hidden вместо атрибута
+            if (isLogin) {
+                loginForm.classList.remove('hidden');
+                registerForm.classList.add('hidden');
+            } else {
+                loginForm.classList.add('hidden');
+                registerForm.classList.remove('hidden');
+            }
             message.hidden = true;
         }
 
+        // Логика переключения вкладок
         tabLogin.addEventListener('click', () => switchTab(true));
         tabRegister.addEventListener('click', () => switchTab(false));
 
-        // 15. Логика кнопки "Показать пароль"
+        // Кнопки показа пароля
         document.querySelectorAll('.toggle-password').forEach(btn => {
             btn.addEventListener('click', () => {
                 const targetId = btn.dataset.target;
@@ -139,17 +147,18 @@
                 if (input) {
                     if (input.type === 'password') {
                         input.type = 'text';
-                        btn.textContent = '🙈'; // Иконка "закрыть"
+                        btn.textContent = '🙈';
                         btn.title = 'Скрыть пароль';
                     } else {
                         input.type = 'password';
-                        btn.textContent = '👁'; // Иконка "открыть"
+                        btn.textContent = '👁';
                         btn.title = 'Показать пароль';
                     }
                 }
             });
         });
 
+        // Логика входа
         loginForm.addEventListener('submit', async e => {
             e.preventDefault();
             const fd = new FormData(loginForm);
@@ -167,6 +176,7 @@
             }
         });
 
+        // Логика регистрации
         registerForm.addEventListener('submit', async e => {
             e.preventDefault();
             const fd = new FormData(registerForm);
